@@ -27,11 +27,70 @@ function getBindingFromFunctionPath(path) {
 }
 
 /**
+ * True if the call looks like a call of act() or contains a call to act().
+ * We use the naming of APIs from React Testing Library:
+ * act, render, rerender and fireEvent are assumed to be methods from React Testing Library.
+ * @param {t.CallExpression} callExpression
+ */
+function isActOrCallsAct(callExpression) {
+	// act()
+	if (
+		callExpression.callee.type === "Identifier" &&
+		callExpression.callee.name === "act"
+	) {
+		return true;
+	}
+
+	// fireEvent.*()
+	if (
+		callExpression.callee.type === "MemberExpression" &&
+		callExpression.callee.object.type === "Identifier" &&
+		callExpression.callee.object.name === "fireEvent"
+	) {
+		return true;
+	}
+
+	// render
+	if (
+		callExpression.callee.type === "Identifier" &&
+		callExpression.callee.name === "render"
+	) {
+		return true;
+	}
+
+	// rerender
+	if (
+		callExpression.callee.type === "Identifier" &&
+		callExpression.callee.name === "rerender"
+	) {
+		return true;
+	}
+
+	// unmount
+	if (
+		callExpression.callee.type === "Identifier" &&
+		callExpression.callee.name === "unmount"
+	) {
+		return true;
+	}
+
+	// cleanup
+	if (
+		callExpression.callee.type === "Identifier" &&
+		callExpression.callee.name === "cleanup"
+	) {
+		return true;
+	}
+
+	return false;
+}
+
+/**
  * @type {import('jscodeshift').Transform}
  *
  * Summary for Klarna's klapp@TODO
  */
-const useCallbackImplicitAnyTransform = (file) => {
+const codemodMissingAwaitActTransform = (file) => {
 	const ast = parseSync(file);
 
 	/**
@@ -90,13 +149,7 @@ const useCallbackImplicitAnyTransform = (file) => {
 	traverse(traverseRoot, {
 		CallExpression(path) {
 			const callExpression = path.node;
-			let shouldHaveAwait = false;
-			if (
-				callExpression.callee.type === "Identifier" &&
-				callExpression.callee.name === "act"
-			) {
-				shouldHaveAwait = true;
-			}
+			const shouldHaveAwait = isActOrCallsAct(callExpression);
 
 			if (shouldHaveAwait) {
 				ensureAwait(path);
@@ -111,4 +164,4 @@ const useCallbackImplicitAnyTransform = (file) => {
 	return file.source;
 };
 
-module.exports = useCallbackImplicitAnyTransform;
+module.exports = codemodMissingAwaitActTransform;

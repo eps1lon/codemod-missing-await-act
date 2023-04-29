@@ -8,7 +8,7 @@ function applyTransform(source, options = {}) {
 		codemodMissingAwaitTransform,
 		options,
 		{
-			path: "test.ts",
+			path: "test.tsx",
 			source: dedent(source),
 		}
 	);
@@ -127,5 +127,52 @@ test("act in utils #3", () => {
 			
 			return test
 		}"
+	`);
+});
+
+test("React Testing Library api", () => {
+	expect(
+		applyTransform(`
+			import { cleanup, fireEvent, render } from "@testing-library/react";
+
+			beforeEach(() => {
+				cleanup();
+			});
+
+			function renderWithProviders(element) {
+				const {rerender, unmount} = render(<TestProvider>{element}</TestProvider>);
+			
+				return {rerender, unmount}
+			}
+			
+			test("test", () => {
+				const { rerender, unmount } = renderWithProviders(<div />);
+			
+				rerender(<span />);
+			
+				unmount();
+			});
+		
+		`)
+	).toMatchInlineSnapshot(`
+		"import { cleanup, fireEvent, render } from "@testing-library/react";
+
+		beforeEach(async () => {
+			await cleanup();
+		});
+
+		async function renderWithProviders(element) {
+			const {rerender, unmount} = await render(<TestProvider>{element}</TestProvider>);
+
+			return {rerender, unmount}
+		}
+
+		test("test", async () => {
+			const { rerender, unmount } = await renderWithProviders(<div />);
+
+			await rerender(<span />);
+
+			await unmount();
+		});"
 	`);
 });
