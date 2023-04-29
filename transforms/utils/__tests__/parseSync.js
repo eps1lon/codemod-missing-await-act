@@ -20,4 +20,22 @@ describe("parseSync", () => {
 			})
 		).not.toThrow();
 	});
+
+	test("tsx", () => {
+		expect(() =>
+			parseSync({
+				path: "test.tsx",
+				source: `<div />`,
+			})
+		).not.toThrow();
+	});
+
+	test("jsx", () => {
+		expect(() =>
+			parseSync({
+				path: "test.js",
+				source: `<div />`,
+			})
+		).not.toThrow();
+	});
 });

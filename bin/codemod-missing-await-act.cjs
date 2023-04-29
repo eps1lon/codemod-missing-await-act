@@ -51,7 +51,7 @@ async function main() {
 				 * @type {string[]}
 				 */
 				const args = [
-					"--extensions=tsx,ts",
+					"--extensions=js,jsx,mjs,cjs,ts,tsx,mts,cts",
 					`"--ignore-pattern=${argv.ignorePattern}"`,
 					// The transforms are published as JS compatible with the supported Node.js versions.
 					"--no-babel",
