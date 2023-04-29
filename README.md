@@ -1,13 +1,58 @@
 # codemod-missing-await-act
 
-Adds missing `await` using [jscodeshift](https://github.com/facebook/jscodeshift)
+Adds missing `await` to `act` calls or methods that like contain an `act` call using [jscodeshift](https://github.com/facebook/jscodeshift).
+We all track usage of these methods throughout the file.
+For example, given
+
+```tsx
+function focus(element) {
+	act(() => {
+		element.focus();
+	});
+}
+
+test("focusing", () => {
+	const { container } = render("<button />");
+
+	focus(container);
+});
+```
+
+will add an `await` to `act` and also add `await` to `focus` since `focus` is now an async method.
+The end result will be
+
+```tsx
+async function focus(element) {
+	await act(() => {
+		element.focus();
+	});
+}
+
+test("focusing", async () => {
+	const { container } = await render("<button />");
+
+	await focus(container);
+});
+```
+
+Right now we assume calls to `act`, `render`, `rerender`, `fireEvent` and `cleanup` should be awaited.
+These are all names of methods from React Testing Library.
+
+Note that any call expression that calls a method from an object (so called "member expression") are not codemodded.
+For example, this codemod will not add an `await` to `someObj.cleanup()`.
 
 ## Getting started
 
 ```bash
 $ npx codemod-missing-await-act ./src
-
-TODO
+Processing 4 files...
+All done.
+Results:
+0 errors
+3 unmodified
+0 skipped
+1 ok
+Time elapsed: 0.428seconds
 ```
 
 ## Usage
