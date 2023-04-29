@@ -8,7 +8,7 @@ const path = require("path");
 
 async function main() {
 	const transformsRoot = path.join(__dirname, "../transforms");
-	const codemod = 'codemod-missing-await-act'
+	const codemod = "codemod-missing-await-act";
 
 	yargs(hideBin(process.argv))
 		.scriptName("codemod-missing-await-act")
