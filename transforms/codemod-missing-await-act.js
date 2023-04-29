@@ -66,6 +66,14 @@ function isActOrCallsAct(callExpression) {
 		return true;
 	}
 
+	// renderHook
+	if (
+		callExpression.callee.type === "Identifier" &&
+		callExpression.callee.name === "renderHook"
+	) {
+		return true;
+	}
+
 	// rerender
 	if (
 		callExpression.callee.type === "Identifier" &&

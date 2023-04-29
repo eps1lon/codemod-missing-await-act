@@ -133,8 +133,14 @@ test("act in utils #3", () => {
 test("React Testing Library api", () => {
 	expect(
 		applyTransform(`
-			import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-
+			import {
+				cleanup,
+				fireEvent,
+				render,
+				renderHook,
+				screen,
+			} from "@testing-library/react";
+			
 			beforeEach(() => {
 				cleanup();
 			});
@@ -162,9 +168,22 @@ test("React Testing Library api", () => {
 			
 				unmount();
 			});
+			
+			test("renderHook", () => {
+				const { result, unmount } = renderHook(() => useHook());
+			
+				unmount();
+			});
+		
 		`)
 	).toMatchInlineSnapshot(`
-		"import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+		"import {
+			cleanup,
+			fireEvent,
+			render,
+			renderHook,
+			screen,
+		} from "@testing-library/react";
 
 		beforeEach(async () => {
 			await cleanup();
@@ -187,6 +206,12 @@ test("React Testing Library api", () => {
 		        bubbles: true,
 		        cancelable: true,
 		    }));
+
+			await unmount();
+		});
+
+		test("renderHook", async () => {
+			const { result, unmount } = await renderHook(() => useHook());
 
 			await unmount();
 		});"
