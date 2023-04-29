@@ -48,13 +48,24 @@ const tsxParserOptions = {
 	...tsParserOptions,
 	plugins: [...tsParserOptions.plugins, "jsx"],
 };
+const jsParserOptions = {
+	...baseParserOptions,
+	plugins: [...baseParserOptions.plugins, "jsx"],
+};
 
 /**
  * Fork `jscodeshift`'s `tsx` parser with support for .d.ts files
  * @param {import('jscodeshift').FileInfo} fileInfo
  */
 function parseSync(fileInfo) {
-	const dts = fileInfo.path.endsWith(".d.ts");
+	const ts =
+		fileInfo.path.endsWith(".ts") ||
+		fileInfo.path.endsWith(".mts") ||
+		fileInfo.path.endsWith(".cts");
+	const dts =
+		fileInfo.path.endsWith(".d.ts") ||
+		fileInfo.path.endsWith(".d.mts") ||
+		fileInfo.path.endsWith(".d.cts");
 	const tsx = fileInfo.path.endsWith(".tsx");
 
 	return j(fileInfo.source, {
@@ -73,10 +84,12 @@ function parseSync(fileInfo) {
 						// So if the parser fails in an ambient context we just try again without ambient context
 					}
 				}
-				if (tsx) {
+				if (ts) {
+					return babylon.parse(code, tsParserOptions);
+				} else if (tsx) {
 					return babylon.parse(code, tsxParserOptions);
 				} else {
-					return babylon.parse(code, tsParserOptions);
+					return babylon.parse(code, jsParserOptions);
 				}
 			},
 		},
