@@ -6,20 +6,23 @@ const traverse = require("@babel/traverse").default;
  * @param {babel.NodePath<t.Function>} path
  */
 function getBindingFromFunctionPath(path) {
-	let bindingName = null;
+	/** @type {string | undefined} */
+	let bindingName;
 	path.node.type;
 	if (t.isFunctionDeclaration(path.node)) {
-		bindingName = path.node.id.name;
+		bindingName = path.node.id?.name;
 	} else if (
 		t.isFunctionExpression(path.node) ||
 		t.isArrowFunctionExpression(path.node)
 	) {
 		if (t.isVariableDeclarator(path.parent)) {
-			bindingName = path.parent.id.name;
+			bindingName =
+				path.parent.id.type === "Identifier" ? path.parent.id.name : undefined;
 		}
 	}
 
-	const binding = path.scope.getBinding(bindingName);
+	const binding =
+		bindingName !== undefined ? path.scope.getBinding(bindingName) : undefined;
 	return binding;
 }
 
@@ -32,7 +35,6 @@ const useCallbackImplicitAnyTransform = (file) => {
 	const ast = parseSync(file);
 
 	/**
-	 *
 	 * @param {babel.NodePath<t.Expression>} path
 	 */
 	function ensureAwait(path) {
@@ -58,10 +60,10 @@ const useCallbackImplicitAnyTransform = (file) => {
 		}
 
 		if (maybeFunctionScope) {
-			/**
-			 * @type {babel.NodePath<t.Function>}
-			 */
-			const functionPath = maybeFunctionScope.path;
+			const functionPath = /** @type {babel.NodePath<t.Function>} */ (
+				maybeFunctionScope.path
+			);
+
 			if (expressionNeedsAwait) {
 				functionPath.node.async = true;
 			}
@@ -71,7 +73,10 @@ const useCallbackImplicitAnyTransform = (file) => {
 			if (binding) {
 				binding.referencePaths.forEach((referencePath) => {
 					if (t.isCallExpression(referencePath.parent)) {
-						ensureAwait(referencePath.parentPath);
+						ensureAwait(
+							/** @type {babel.NodePath<t.CallExpression>} */
+							(referencePath.parentPath)
+						);
 					}
 				});
 			}
