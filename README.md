@@ -45,8 +45,14 @@ For example, this codemod will not add an `await` to `someObj.cleanup()`.
 
 ```bash
 $ npx codemod-missing-await-act ./src
-
-TODO
+Processing 4 files... 
+All done. 
+Results: 
+0 errors
+3 unmodified
+0 skipped
+1 ok
+Time elapsed: 0.428seconds 
 ```
 
 ## Usage
