@@ -58,7 +58,6 @@ function isActOrCallsAct(callExpression) {
 		return true;
 	}
 
-
 	// render
 	if (
 		callExpression.callee.type === "Identifier" &&
