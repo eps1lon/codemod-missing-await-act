@@ -50,6 +50,15 @@ function isActOrCallsAct(callExpression) {
 		return true;
 	}
 
+	// fireEvent()
+	if (
+		callExpression.callee.type === "Identifier" &&
+		callExpression.callee.name === "fireEvent"
+	) {
+		return true;
+	}
+
+
 	// render
 	if (
 		callExpression.callee.type === "Identifier" &&
