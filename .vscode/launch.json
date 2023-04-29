@@ -10,7 +10,7 @@
         "${workspaceRoot}/node_modules/.bin/jest",
         "--runInBand",
         "--watch",
-        "transforms/__tests__/codemod-missing-await.js"
+        "transforms/__tests__/codemod-missing-await-act.js"
       ],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen"

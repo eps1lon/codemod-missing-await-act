@@ -2,7 +2,7 @@
 	"$schema": "https://unpkg.com/@changesets/config@2.0.0/schema.json",
 	"changelog": [
 		"@changesets/changelog-github",
-		{ "repo": "eps1lon/codemod-missing-await" }
+		{ "repo": "eps1lon/codemod-missing-await-act" }
 	],
 	"commit": false,
 	"fixed": [],

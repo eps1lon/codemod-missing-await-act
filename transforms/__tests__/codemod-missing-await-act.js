@@ -1,7 +1,7 @@
 const { expect, test } = require("@jest/globals");
 const { default: dedent } = require("dedent-tabs");
 const JscodeshiftTestUtils = require("jscodeshift/dist/testUtils");
-const codemodMissingAwaitTransform = require("../codemod-missing-await");
+const codemodMissingAwaitTransform = require("../codemod-missing-await-act");
 
 function applyTransform(source, options = {}) {
 	return JscodeshiftTestUtils.applyTransform(

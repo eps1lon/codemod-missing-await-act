@@ -1,7 +1,7 @@
 {
-	"name": "codemod-missing-await",
+	"name": "codemod-missing-await-act",
 	"version": "0.0.1",
-	"bin": "bin/codemod-missing-await.cjs",
+	"bin": "bin/codemod-missing-await-act.cjs",
 	"scripts": {
 		"format": "prettier . --write",
 		"format:check": "prettier . --check",

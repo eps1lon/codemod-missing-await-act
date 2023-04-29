@@ -2989,9 +2989,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"codemod-missing-await@workspace:.":
+"codemod-missing-await-act@workspace:.":
   version: 0.0.0-use.local
-  resolution: "codemod-missing-await@workspace:."
+  resolution: "codemod-missing-await-act@workspace:."
   dependencies:
     "@babel/core": ^7.17.8
     "@babel/preset-env": ^7.16.11
@@ -3012,7 +3012,7 @@ __metadata:
     typescript: ^5.0.0
     yargs: ^17.4.0
   bin:
-    codemod-missing-await: bin/codemod-missing-await.cjs
+    codemod-missing-await-act: bin/codemod-missing-await-act.cjs
   languageName: unknown
   linkType: soft
 

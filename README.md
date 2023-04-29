@@ -1,11 +1,11 @@
-# codemod-missing-await
+# codemod-missing-await-act
 
 Adds missing `await` using [jscodeshift](https://github.com/facebook/jscodeshift)
 
 ## Getting started
 
 ```bash
-$ npx codemod-missing-await ./src
+$ npx codemod-missing-await-act ./src
 
 TODO
 ```
@@ -13,9 +13,9 @@ TODO
 ## Usage
 
 ```bash
-$ npx codemod-missing-await
+$ npx codemod-missing-await-act
 
-codemod-missing-await <paths...>
+codemod-missing-await-act <paths...>
 
 Positionals:
   paths                                               [string] [required]
@@ -28,7 +28,7 @@ Options:
   --verbose                                    [boolean] [default: false]
 
 Examples:
-  codemod-missing-await ./              Ignores `node_modules` and
+  codemod-missing-await-act ./              Ignores `node_modules` and
   --ignore-pattern                      `build` folders
   "**/{node_modules,build}/**"
 ```

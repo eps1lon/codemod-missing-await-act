@@ -3,11 +3,11 @@ const childProcess = require("child_process");
 const path = require("path");
 const { promisify } = require("util");
 
-describe("codemod-missing-await", () => {
+describe("codemod-missing-await-act", () => {
 	const exec = promisify(childProcess.exec);
 	const typesReactCodemodBin = path.join(
 		__dirname,
-		"../codemod-missing-await.cjs"
+		"../codemod-missing-await-act.cjs"
 	);
 	function execCodemodMissingAwait(args) {
 		return exec(`${typesReactCodemodBin} ${args}`, {});
@@ -17,10 +17,8 @@ describe("codemod-missing-await", () => {
 		await expect(execCodemodMissingAwait("--help")).resolves
 			.toMatchInlineSnapshot(`
 		{
-		  "stderr": "Debugger attached.
-		Waiting for the debugger to disconnect...
-		",
-		  "stdout": "codemod-missing-await <paths...>
+		  "stderr": "",
+		  "stdout": "codemod-missing-await-act <paths...>
 
 		Positionals:
 		  paths                                                      [string] [required]
@@ -33,7 +31,7 @@ describe("codemod-missing-await", () => {
 		  --verbose                                           [boolean] [default: false]
 
 		Examples:
-		  codemod-missing-await ./                  Ignores \`node_modules\` and \`build\`
+		  codemod-missing-await-act ./              Ignores \`node_modules\` and \`build\`
 		  --ignore-pattern                          folders
 		  "**/{node_modules,build}/**"
 		",
@@ -53,14 +51,6 @@ describe("codemod-missing-await", () => {
 		const { stderr } = await execCodemodMissingAwait(`${fixture}`);
 
 		// Everything ok
-		expect(stderr).toMatchInlineSnapshot(`
-		"Debugger attached.
-		Debugger attached.
-		Debugger attached.
-		Waiting for the debugger to disconnect...
-		Waiting for the debugger to disconnect...
-		Waiting for the debugger to disconnect...
-		"
-	`);
+		expect(stderr).toMatchInlineSnapshot(`""`);
 	});
 });
