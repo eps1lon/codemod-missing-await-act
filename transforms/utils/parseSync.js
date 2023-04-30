@@ -50,7 +50,7 @@ const tsxParserOptions = {
 };
 const jsParserOptions = {
 	...baseParserOptions,
-	plugins: [...baseParserOptions.plugins, "jsx"],
+	plugins: [...baseParserOptions.plugins, "flow", "jsx"],
 };
 
 /**
