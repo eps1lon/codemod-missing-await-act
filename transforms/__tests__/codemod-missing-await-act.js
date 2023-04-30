@@ -375,3 +375,72 @@ test("react-dom API", () => {
 		})"
 	`);
 });
+
+test("intentional interleaving is stopped", () => {
+	expect(
+		applyTransform(`
+			import { act } from '@testing-library/react'
+			test('test', () => {
+				Promise.all([act(), act()])
+			})
+		`)
+	).toMatchInlineSnapshot(`
+		"import { act } from '@testing-library/react'
+		test('test', async () => {
+			Promise.all([await act(), await act()])
+		})"
+	`);
+});
+
+// Found in facebook/react
+test.failing("already async act", () => {
+	// Code should be unchanged ideally.
+	const code = dedent`
+		import { act } from '@testing-library/react'
+		test('test', async () => {
+			await expect(act(someAsyncScopeFromExternal)).rejects.toThrow()
+		})
+	`;
+
+	expect(applyTransform(code)).toEqual(code);
+});
+
+test("only calls are codemodded", () => {
+	expect(
+		applyTransform(`
+			import { act } from '@testing-library/react'
+			test('test', async() => {
+				act()
+				// don't await this assignment
+				const myAct = act
+			})
+		`)
+	).toMatchInlineSnapshot(`
+		"import { act } from '@testing-library/react'
+		test('test', async() => {
+			await act()
+			// don't await this assignment
+			const myAct = act
+		})"
+	`);
+});
+
+test.failing("reassignment is not tracked", () => {
+	expect(
+		applyTransform(`
+			import { act } from '@testing-library/react'
+			
+			const myAct = act
+			test('test', () => {
+				myAct()
+			})
+		`)
+	).toEqual(dedent`
+		import { act } from '@testing-library/react'
+				
+		const myAct = act
+		test('test', async () => {
+			await myAct()
+		})
+	`);
+});
