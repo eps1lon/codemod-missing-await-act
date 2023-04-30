@@ -444,3 +444,27 @@ test.failing("reassignment is not tracked", () => {
 		})
 	`);
 });
+
+test("does not add await to calls receiving newly async function as an argument", () => {
+	expect(
+		applyTransform(`
+			import { act } from 'react-dom/test-utils';
+			function runTests(test) {
+				function render(source) {
+					act(() => {});
+				}
+				render()
+				test(render);
+			}
+		`)
+	).toMatchInlineSnapshot(`
+		"import { act } from 'react-dom/test-utils';
+		async function runTests(test) {
+			async function render(source) {
+				await act(() => {});
+			}
+			await render()
+			test(render);
+		}"
+	`);
+});
