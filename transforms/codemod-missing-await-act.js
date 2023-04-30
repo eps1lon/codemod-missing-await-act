@@ -172,7 +172,11 @@ const codemodMissingAwaitActTransform = (file) => {
 			const binding = getBindingFromFunctionPath(functionPath);
 			if (binding) {
 				binding.referencePaths.forEach((referencePath) => {
-					if (t.isCallExpression(referencePath.parent)) {
+					// propage await to `binding()` but not `other(binding)`
+					if (
+						t.isCallExpression(referencePath.parent) &&
+						referencePath.key === "callee"
+					) {
 						ensureAwait(
 							/** @type {babel.NodePath<t.CallExpression>} */
 							(referencePath.parentPath)
