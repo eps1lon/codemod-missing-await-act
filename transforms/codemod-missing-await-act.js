@@ -30,7 +30,7 @@ function getBindingFromFunctionPath(path) {
  * True if the call looks like a call of act() or contains a call to act().
  * We use the naming of APIs from React Testing Library:
  * act, render, rerender and fireEvent are assumed to be methods from React Testing Library.
- * @param {t.Identifier | t.MemberExpression} callee
+ * @param {t.CallExpression['callee'] | t.PrivateName} callee
  * @param {string | undefined} importSource undefined if the callee has a local binding
  */
 function isActOrCallsAct(callee, importSource) {
@@ -185,7 +185,7 @@ const codemodMissingAwaitActTransform = (file) => {
 
 	/**
 	 * @param {babel.NodePath<t.CallExpression>} path
-	 * @returns {{ callee: t.MemberExpression | t.Identifier, importSource: string }}
+	 * @returns {{ callee: t.CallExpression['callee'] | t.PrivateName, importSource: string | undefined }}
 	 */
 	function getCalleeAndModuleName(path) {
 		const callExpression = path.node;
@@ -196,7 +196,7 @@ const codemodMissingAwaitActTransform = (file) => {
 
 			if (binding !== undefined) {
 				const bindingPath = binding.path;
-				if (bindingPath.parentPath.isImportDeclaration()) {
+				if (bindingPath.parentPath?.isImportDeclaration()) {
 					const importDeclaration = bindingPath.parentPath.node;
 					const importSource = importDeclaration.source.value;
 					const callee = callExpression.callee;
@@ -204,12 +204,18 @@ const codemodMissingAwaitActTransform = (file) => {
 				}
 			}
 		} else if (callExpression.callee.type === "MemberExpression") {
-			const bindingName = callExpression.callee.object.name;
-			const binding = path.scope.getBinding(bindingName);
+			const bindingName =
+				callExpression.callee.object.type === "Identifier"
+					? callExpression.callee.object.name
+					: undefined;
+			const binding =
+				bindingName === undefined
+					? undefined
+					: path.scope.getBinding(bindingName);
 
 			if (binding !== undefined) {
 				const bindingPath = binding.path;
-				if (bindingPath.parentPath.isImportDeclaration()) {
+				if (bindingPath.parentPath?.isImportDeclaration()) {
 					const importDeclaration = bindingPath.parentPath.node;
 					const importSource = importDeclaration.source.value;
 					const callee =
