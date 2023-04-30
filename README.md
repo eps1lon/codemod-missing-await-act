@@ -5,6 +5,8 @@ We all track usage of these methods throughout the file.
 For example, given
 
 ```tsx
+import { act } from "react-dom/test-utils";
+
 function focus(element) {
 	act(() => {
 		element.focus();
@@ -22,6 +24,8 @@ will add an `await` to `act` and also add `await` to `focus` since `focus` is no
 The end result will be
 
 ```tsx
+import { act } from "react-dom/test-utils";
+
 async function focus(element) {
 	await act(() => {
 		element.focus();
@@ -35,11 +39,24 @@ test("focusing", async () => {
 });
 ```
 
-Right now we assume calls to `act`, `render`, `rerender`, `fireEvent` and `cleanup` should be awaited.
-These are all names of methods from React Testing Library.
+The following methods will be awaited when the codemod is applied:
 
-Note that any call expression that calls a method from an object (so called "member expression") are not codemodded.
-For example, this codemod will not add an `await` to `someObj.cleanup()`.
+- from `react`:
+  - `unstable_act`
+- from `react-dom/test-utils`:
+  - `act`
+- from `react-test-renderer`:
+  - `act`
+- from `@testing-library/react`:
+  - `act`
+  - `cleanup`
+  - `fireEvent`
+  - `fireEvent.*`
+  - `render`
+  - `renderHook`
+
+Right now we assume that any call to `rerender` and `unmount` should be awaited.
+These are all names of methods from React Testing Library.´
 
 ## Getting started
 

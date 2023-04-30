@@ -30,70 +30,95 @@ function getBindingFromFunctionPath(path) {
  * True if the call looks like a call of act() or contains a call to act().
  * We use the naming of APIs from React Testing Library:
  * act, render, rerender and fireEvent are assumed to be methods from React Testing Library.
- * @param {t.CallExpression} callExpression
+ * @param {t.CallExpression['callee'] | t.PrivateName} callee
+ * @param {string | undefined} importSource undefined if the callee has a local binding
  */
-function isActOrCallsAct(callExpression) {
+function isActOrCallsAct(callee, importSource) {
+	// unstable_act
+	if (
+		importSource === "react" &&
+		callee.type === "Identifier" &&
+		callee.name === "unstable_act"
+	) {
+		return true;
+	}
+
 	// act()
 	if (
-		callExpression.callee.type === "Identifier" &&
-		callExpression.callee.name === "act"
+		(importSource?.startsWith("@testing-library/") ||
+			importSource === "react-dom/test-utils" ||
+			importSource === "react-test-renderer") &&
+		callee.type === "Identifier" &&
+		callee.name === "act"
 	) {
 		return true;
 	}
 
 	// fireEvent.*()
 	if (
-		callExpression.callee.type === "MemberExpression" &&
-		callExpression.callee.object.type === "Identifier" &&
-		callExpression.callee.object.name === "fireEvent"
+		(importSource === "@testing-library/react" ||
+			importSource === "@testing-library/react/pure") &&
+		callee.type === "MemberExpression" &&
+		callee.object.type === "Identifier" &&
+		callee.object.name === "fireEvent"
 	) {
 		return true;
 	}
 
 	// fireEvent()
 	if (
-		callExpression.callee.type === "Identifier" &&
-		callExpression.callee.name === "fireEvent"
+		(importSource === "@testing-library/react" ||
+			importSource === "@testing-library/react/pure") &&
+		callee.type === "Identifier" &&
+		callee.name === "fireEvent"
 	) {
 		return true;
 	}
 
 	// render
 	if (
-		callExpression.callee.type === "Identifier" &&
-		callExpression.callee.name === "render"
+		(importSource === "@testing-library/react" ||
+			importSource === "@testing-library/react/pure") &&
+		callee.type === "Identifier" &&
+		callee.name === "render"
 	) {
 		return true;
 	}
 
 	// renderHook
 	if (
-		callExpression.callee.type === "Identifier" &&
-		callExpression.callee.name === "renderHook"
+		(importSource === "@testing-library/react" ||
+			importSource === "@testing-library/react/pure") &&
+		callee.type === "Identifier" &&
+		callee.name === "renderHook"
 	) {
 		return true;
 	}
 
 	// rerender
 	if (
-		callExpression.callee.type === "Identifier" &&
-		callExpression.callee.name === "rerender"
+		importSource === undefined &&
+		callee.type === "Identifier" &&
+		callee.name === "rerender"
 	) {
 		return true;
 	}
 
 	// unmount
 	if (
-		callExpression.callee.type === "Identifier" &&
-		callExpression.callee.name === "unmount"
+		importSource === undefined &&
+		callee.type === "Identifier" &&
+		callee.name === "unmount"
 	) {
 		return true;
 	}
 
 	// cleanup
 	if (
-		callExpression.callee.type === "Identifier" &&
-		callExpression.callee.name === "cleanup"
+		(importSource === "@testing-library/react" ||
+			importSource === "@testing-library/react/pure") &&
+		callee.type === "Identifier" &&
+		callee.name === "cleanup"
 	) {
 		return true;
 	}
@@ -158,14 +183,66 @@ const codemodMissingAwaitActTransform = (file) => {
 		}
 	}
 
+	/**
+	 * @param {babel.NodePath<t.CallExpression>} path
+	 * @returns {{ callee: t.CallExpression['callee'] | t.PrivateName, importSource: string | undefined }}
+	 */
+	function getCalleeAndModuleName(path) {
+		const callExpression = path.node;
+
+		if (callExpression.callee.type === "Identifier") {
+			const bindingName = callExpression.callee.name;
+			const binding = path.scope.getBinding(bindingName);
+
+			if (binding !== undefined) {
+				const bindingPath = binding.path;
+				if (bindingPath.parentPath?.isImportDeclaration()) {
+					const importDeclaration = bindingPath.parentPath.node;
+					const importSource = importDeclaration.source.value;
+					const callee = callExpression.callee;
+					return { callee, importSource: importSource };
+				}
+			}
+		} else if (callExpression.callee.type === "MemberExpression") {
+			const bindingName =
+				callExpression.callee.object.type === "Identifier"
+					? callExpression.callee.object.name
+					: undefined;
+			const binding =
+				bindingName === undefined
+					? undefined
+					: path.scope.getBinding(bindingName);
+
+			if (binding !== undefined) {
+				const bindingPath = binding.path;
+				if (bindingPath.parentPath?.isImportDeclaration()) {
+					const importDeclaration = bindingPath.parentPath.node;
+					const importSource = importDeclaration.source.value;
+					const callee =
+						// For `React.act` we want `act` as the callee
+						// iff `React` comes from a namespace import e.g `import * as React from 'react'`
+						// Otherwise we assume `React` comes from e.g. `import { React } from 'react'`
+						// in which case we just want `React.act` as the callee.
+						bindingPath.node.type === "ImportNamespaceSpecifier"
+							? callExpression.callee.property
+							: callExpression.callee;
+					return { callee, importSource: importSource };
+				}
+			}
+		}
+
+		const callee = callExpression.callee;
+		return { callee, importSource: undefined };
+	}
+
 	let changedSome = false;
 	// ast.get("program").value is sufficient for unit tests but not actually running it on files
 	// TODO: How to test?
 	const traverseRoot = ast.paths()[0].value;
 	traverse(traverseRoot, {
 		CallExpression(path) {
-			const callExpression = path.node;
-			const shouldHaveAwait = isActOrCallsAct(callExpression);
+			const { callee, importSource } = getCalleeAndModuleName(path);
+			const shouldHaveAwait = isActOrCallsAct(callee, importSource);
 
 			if (shouldHaveAwait) {
 				ensureAwait(path);
