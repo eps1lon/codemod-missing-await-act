@@ -17,6 +17,7 @@ function applyTransform(source, options = {}) {
 test("act in test", () => {
 	expect(
 		applyTransform(`
+			import { act } from "@testing-library/react"
 			test("void works", () => {
 				act()
 			})
@@ -25,7 +26,8 @@ test("act in test", () => {
 			})
 		`)
 	).toMatchInlineSnapshot(`
-		"test("void works", async () => {
+		"import { act } from "@testing-library/react"
+		test("void works", async () => {
 			await act()
 		})
 		test("return works", () => {
@@ -34,9 +36,26 @@ test("act in test", () => {
 	`);
 });
 
+test("local act untouched", () => {
+	expect(
+		applyTransform(`
+			function act() {}
+			test("void works", () => {
+				act()
+			})
+	`)
+	).toMatchInlineSnapshot(`
+		"function act() {}
+		test("void works", () => {
+			act()
+		})"
+	`);
+});
+
 test("act in utils #1", () => {
 	expect(
 		applyTransform(`
+			import { act } from "@testing-library/react"
 			function caseA() {
 				return act()
 			}
@@ -51,7 +70,8 @@ test("act in utils #1", () => {
 			}
 		`)
 	).toMatchInlineSnapshot(`
-		"function caseA() {
+		"import { act } from "@testing-library/react"
+		function caseA() {
 			return act()
 		}
 
@@ -69,6 +89,7 @@ test("act in utils #1", () => {
 test("act in utils #2", () => {
 	expect(
 		applyTransform(`
+			import { act } from "@testing-library/react"
 			function caseA() {
 				act()
 			}
@@ -84,7 +105,8 @@ test("act in utils #2", () => {
 			}
 		`)
 	).toMatchInlineSnapshot(`
-		"async function caseA() {
+		"import { act } from "@testing-library/react"
+		async function caseA() {
 			await act()
 		}
 
@@ -103,6 +125,7 @@ test("act in utils #2", () => {
 test("act in utils #3", () => {
 	expect(
 		applyTransform(`
+			import { act } from "@testing-library/react"
 			const caseA = () => {
 				act()
 			}
@@ -116,7 +139,8 @@ test("act in utils #3", () => {
 			}
 		`)
 	).toMatchInlineSnapshot(`
-		"const caseA = async () => {
+		"import { act } from "@testing-library/react"
+		const caseA = async () => {
 			await act()
 		}
 
@@ -215,5 +239,139 @@ test("React Testing Library api", () => {
 
 			await unmount();
 		});"
+	`);
+});
+
+test("React Testing Library api as namespace", () => {
+	expect(
+		applyTransform(`
+			import * as RTL from "@testing-library/react";
+			
+			beforeEach(() => {
+				RTL.cleanup();
+			});
+			
+			function renderWithProviders(element) {
+				const { rerender, unmount } = RTL.render(<TestProvider>{element}</TestProvider>);
+			
+				return { rerender, unmount };
+			}
+			
+			test("test", () => {
+				const { rerender, unmount } = renderWithProviders(<button>Test</button>);
+			
+				RTL.fireEvent.click(screen.getByRole("button"));
+			
+				rerender(<span />);
+			
+				RTL.fireEvent(
+					screen.getByRole("button"),
+					new MouseEvent("click", {
+						bubbles: true,
+						cancelable: true,
+					})
+				);
+			
+				unmount();
+			});
+			
+			test("renderHook", () => {
+				const { result, unmount } = renderHook(() => useHook());
+			
+				unmount();
+			});
+		
+		`)
+	).toMatchInlineSnapshot(`
+		"import * as RTL from "@testing-library/react";
+
+		beforeEach(async () => {
+			await RTL.cleanup();
+		});
+
+		async function renderWithProviders(element) {
+			const { rerender, unmount } = await RTL.render(<TestProvider>{element}</TestProvider>);
+
+			return { rerender, unmount };
+		}
+
+		test("test", async () => {
+			const { rerender, unmount } = await renderWithProviders(<button>Test</button>);
+
+			RTL.fireEvent.click(screen.getByRole("button"));
+
+			await rerender(<span />);
+
+			await RTL.fireEvent(screen.getByRole("button"), new MouseEvent("click", {
+		        bubbles: true,
+		        cancelable: true,
+		    }));
+
+			await unmount();
+		});
+
+		test("renderHook", async () => {
+			const { result, unmount } = renderHook(() => useHook());
+
+			await unmount();
+		});"
+	`);
+});
+
+test("react API", () => {
+	expect(
+		applyTransform(`
+			import * as React from 'react'
+			
+			test('test', () => {
+				React.unstable_act()
+			})
+		`)
+	).toMatchInlineSnapshot(`
+		"import * as React from 'react'
+
+		test('test', async () => {
+			await React.unstable_act()
+		})"
+	`);
+});
+
+test("react-test-renderer API", () => {
+	expect(
+		applyTransform(`
+			import { act } from 'react-test-renderer'
+			
+			test('test', () => {
+				act()
+			})
+		`)
+	).toMatchInlineSnapshot(`
+		"import { act } from 'react-test-renderer'
+
+		test('test', async () => {
+			await act()
+		})"
+	`);
+});
+
+test("react-dom API", () => {
+	expect(
+		applyTransform(`
+			import { act } from 'react-dom/test-utils'
+			import { flushSync } from 'react-dom'
+			
+			test('test', () => {
+				act()
+				flushSync()
+			})
+		`)
+	).toMatchInlineSnapshot(`
+		"import { act } from 'react-dom/test-utils'
+		import { flushSync } from 'react-dom'
+
+		test('test', async () => {
+			await act()
+			flushSync()
+		})"
 	`);
 });
