@@ -39,12 +39,12 @@ describe("parseSync", () => {
 		).not.toThrow();
 	});
 
-	test('Flow', () => {
+	test("Flow", () => {
 		expect(() =>
 			parseSync({
 				path: "test.js",
 				source: `import type { Foo } from 'foo';`,
 			})
 		).not.toThrow();
-	})
+	});
 });
