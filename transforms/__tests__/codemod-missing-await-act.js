@@ -1,4 +1,4 @@
-const { expect, test } = require("@jest/globals");
+const { afterEach, expect, jest, test } = require("@jest/globals");
 const { default: dedent } = require("dedent-tabs");
 const JscodeshiftTestUtils = require("jscodeshift/dist/testUtils");
 const codemodMissingAwaitTransform = require("../codemod-missing-await-act");
@@ -13,6 +13,10 @@ function applyTransform(source, options = {}) {
 		}
 	);
 }
+
+afterEach(() => {
+	jest.restoreAllMocks();
+});
 
 test("act in test", () => {
 	expect(
@@ -483,4 +487,48 @@ test("does not add await to calls receiving newly async function as an argument"
 			test(render);
 		}"
 	`);
+});
+
+test("export newly async warns", () => {
+	jest.spyOn(console, "warn").mockImplementation(() => {});
+
+	expect(
+		applyTransform(`
+			import { act as domAct } from 'react-dom/test-utils';
+			const act = scope => {
+				domAct(scope)
+			}
+			export default act
+			export { act, act as unstable_act }
+		`)
+	).toMatchInlineSnapshot(`
+		"import { act as domAct } from 'react-dom/test-utils';
+		const act = async scope => {
+			await domAct(scope)
+		}
+		export default act
+		export { act, act as unstable_act }"
+	`);
+	expect(console.warn.mock.calls).toEqual([
+		[expect.stringContaining("test.tsx: Default export is now async.")],
+		[expect.stringContaining("test.tsx: Export 'act' is now async.")],
+		[expect.stringContaining("test.tsx: Export 'unstable_act' is now async.")],
+	]);
+});
+
+test("export newly async reassignment does not warn", () => {
+	jest.spyOn(console, "warn").mockImplementation(() => {});
+
+	expect(
+		applyTransform(`
+			import { act as domAct } from 'react-dom/test-utils';
+			// We only track CallExpressions :(
+			export const act = domAct;
+		`)
+	).toMatchInlineSnapshot(`
+		"import { act as domAct } from 'react-dom/test-utils';
+		// We only track CallExpressions :(
+		export const act = domAct;"
+	`);
+	expect(console.warn.mock.calls).toEqual([]);
 });
