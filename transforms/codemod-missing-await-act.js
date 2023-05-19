@@ -190,7 +190,11 @@ const codemodMissingAwaitActTransform = (file) => {
 						const exportSpecifier = /** @type {t.ExportSpecifier} */ (
 							referencePath.parent
 						);
-						const exportName = exportSpecifier.exported.name;
+						const exportName =
+							// exported is Identifier | StringLiteral
+							exportSpecifier.exported.type === "Identifier"
+								? exportSpecifier.exported.name
+								: exportSpecifier.exported.value;
 
 						if (!warnedExports.has(exportName)) {
 							console.warn(

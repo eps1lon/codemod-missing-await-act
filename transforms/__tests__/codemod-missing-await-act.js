@@ -499,7 +499,7 @@ test("export newly async warns", () => {
 				domAct(scope)
 			}
 			export default act
-			export { act, act as unstable_act }
+			export { act, act as unstable_act, act as 'literal_act' }
 		`)
 	).toMatchInlineSnapshot(`
 		"import { act as domAct } from 'react-dom/test-utils';
@@ -507,12 +507,13 @@ test("export newly async warns", () => {
 			await domAct(scope)
 		}
 		export default act
-		export { act, act as unstable_act }"
+		export { act, act as unstable_act, act as 'literal_act' }"
 	`);
 	expect(console.warn.mock.calls).toEqual([
 		[expect.stringContaining("test.tsx: Default export is now async.")],
 		[expect.stringContaining("test.tsx: Export 'act' is now async.")],
 		[expect.stringContaining("test.tsx: Export 'unstable_act' is now async.")],
+		[expect.stringContaining("test.tsx: Export 'literal_act' is now async.")],
 	]);
 });
 
