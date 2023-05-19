@@ -1,9 +1,15 @@
 const { afterEach, expect, jest, test } = require("@jest/globals");
 const { default: dedent } = require("dedent-tabs");
 const JscodeshiftTestUtils = require("jscodeshift/dist/testUtils");
+const path = require("path");
 const codemodMissingAwaitTransform = require("../codemod-missing-await-act");
 
-function applyTransform(source, options = {}) {
+function applyTransform(
+	source,
+	options = {
+		importConfig: path.resolve(__dirname, "../../default-import-config.mjs"),
+	}
+) {
 	return JscodeshiftTestUtils.applyTransform(
 		codemodMissingAwaitTransform,
 		options,

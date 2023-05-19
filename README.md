@@ -39,24 +39,51 @@ test("focusing", async () => {
 });
 ```
 
-The following methods will be awaited when the codemod is applied:
-
-- from `react`:
-  - `unstable_act`
-- from `react-dom/test-utils`:
-  - `act`
-- from `react-test-renderer`:
-  - `act`
-- from `@testing-library/react`:
-  - `act`
-  - `cleanup`
-  - `fireEvent`
-  - `fireEvent.*`
-  - `render`
-  - `renderHook`
-
 Right now we assume that any call to `rerender` and `unmount` should be awaited.
-These are all names of methods from React Testing Library.´
+
+The following methods will be awaited when the codemod is applied by default:
+
+```js
+// codemod-missing-await/default-iport-config.mjs
+// Import aliases have no effect on the codemod.
+// They're only used to not cause JS Syntax errors.
+// The codemod will only consider the imported name.
+import {
+	act,
+	cleanup,
+	/**
+	 * @includeMemberCalls
+	 * e.g. fireEvent.click()
+	 */
+	fireEvent,
+	render,
+	renderHook,
+} from "@testing-library/react";
+import {
+	act as act2,
+	cleanup as cleanup2,
+	/**
+	 * @includeMemberCalls
+	 * e.g. fireEvent.click()
+	 */
+	fireEvent as fireEvent2,
+	render as render2,
+	renderHook as renderHook2,
+} from "@testing-library/react/pure";
+import { unstable_act } from "react";
+import { act as act3 } from "react-dom/test-utils";
+import { act as act4 } from "react-test-renderer";
+```
+
+You can add more methods if they're imported from somewhere by passing a JS file that only includes imports of those methods e.g. `npx codemod-missing-await-act ./src --import-config ./my-testing-library-imports.js` where `my-testing-library-imports.js` contains
+
+```js
+import { renderWithProviders } from "@mycompany/testing-library";
+```
+
+Now the codemod will also add an `await` to any `renderWithProviders` call imported from `@mycompany/testing-library`.
+
+By default, the codemod uses the code listed in [codemod-missing-await/default-import-config.mks](./default-import-config.mjs).
 
 ## Getting started
 
