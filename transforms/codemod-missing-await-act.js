@@ -203,7 +203,19 @@ const codemodMissingAwaitActTransform = (file) => {
 				if (bindingPath.parentPath?.isImportDeclaration()) {
 					const importDeclaration = bindingPath.parentPath.node;
 					const importSource = importDeclaration.source.value;
-					const callee = callExpression.callee;
+					const importSpecifier =
+						/** @type {t.ImportNamespaceSpecifier | t.ImportSpecifier} */ (
+							bindingPath.node
+						);
+					// import * as foo from '...'
+					//             ^^^ local
+					// import { act as rtlAct } from '...'
+					//                 ^^^^^^ local
+					//          ^^^ imported
+					const callee =
+						importSpecifier.type === "ImportNamespaceSpecifier"
+							? importSpecifier.local
+							: importSpecifier.imported;
 					return { callee, importSource: importSource };
 				}
 			}
