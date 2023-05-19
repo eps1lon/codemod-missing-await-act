@@ -36,6 +36,22 @@ test("act in test", () => {
 	`);
 });
 
+test("act import alias in test", () => {
+	expect(
+		applyTransform(`
+			import { act as rtlAct } from "@testing-library/react"
+			const act = scope => {
+				rtlAct(scope)
+			}
+		`)
+	).toMatchInlineSnapshot(`
+		"import { act as rtlAct } from "@testing-library/react"
+		const act = async scope => {
+			await rtlAct(scope)
+		}"
+	`);
+});
+
 test("local act untouched", () => {
 	expect(
 		applyTransform(`
