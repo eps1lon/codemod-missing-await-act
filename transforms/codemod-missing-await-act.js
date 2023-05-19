@@ -132,6 +132,15 @@ function isActOrCallsAct(callee, importSource) {
  * Summary for Klarna's klapp@TODO
  */
 const codemodMissingAwaitActTransform = (file) => {
+	// Ideally we'd not match these earlier but it seems easier to bail out here.
+	const isDeclarationFile =
+		file.path.endsWith(".d.ts") || file.path.endsWith(".d.cts");
+	file.path.endsWith(".d.ts") || file.path.endsWith(".d.mts");
+	if (isDeclarationFile) {
+		// undefined return marks the file as skipped in JSCodeShift (nice!)
+		return;
+	}
+
 	const ast = parseSync(file);
 	/** @type {Set<string>} */
 	const warnedExports = new Set();
