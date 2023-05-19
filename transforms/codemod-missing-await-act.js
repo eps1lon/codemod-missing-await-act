@@ -133,6 +133,8 @@ function isActOrCallsAct(callee, importSource) {
  */
 const codemodMissingAwaitActTransform = (file) => {
 	const ast = parseSync(file);
+	/** @type {Set<string>} */
+	const warnedExports = new Set();
 
 	/**
 	 * @param {babel.NodePath<t.Expression>} path
@@ -181,6 +183,39 @@ const codemodMissingAwaitActTransform = (file) => {
 							/** @type {babel.NodePath<t.CallExpression>} */
 							(referencePath.parentPath)
 						);
+					} else if (
+						t.isExportSpecifier(referencePath.parent) &&
+						referencePath.key === "local"
+					) {
+						const exportSpecifier = /** @type {t.ExportSpecifier} */ (
+							referencePath.parent
+						);
+						const exportName =
+							// exported is Identifier | StringLiteral
+							exportSpecifier.exported.type === "Identifier"
+								? exportSpecifier.exported.name
+								: exportSpecifier.exported.value;
+
+						if (!warnedExports.has(exportName)) {
+							console.warn(
+								`${file.path}: Export '${exportName}' is now async. ` +
+									`Make sure to update the rules of this codemod and run it again.`
+							);
+							warnedExports.add(exportName);
+						}
+					} else if (
+						t.isExportDefaultDeclaration(referencePath.parent) &&
+						referencePath.key === "declaration"
+					) {
+						const exportName = "default";
+
+						if (!warnedExports.has(exportName)) {
+							console.warn(
+								`${file.path}: Default export is now async. ` +
+									`Make sure to update the rules of this codemod and run it again.`
+							);
+							warnedExports.add(exportName);
+						}
 					}
 				});
 			}
