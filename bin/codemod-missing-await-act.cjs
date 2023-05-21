@@ -26,7 +26,13 @@ async function main() {
 							default: false,
 							type: "boolean",
 						})
+						.option("ignore-config", {
+							description:
+								"ignore files if they match patterns sourced from a configuration file (e.g. a .gitignore)",
+							type: "string",
+						})
 						.option("ignore-pattern", {
+							description: "ignore files that match a provided glob expression",
 							default: "**/node_modules/**",
 							type: "string",
 						})
@@ -65,7 +71,7 @@ async function main() {
 				 */
 				const args = [
 					"--extensions=js,jsx,mjs,cjs,ts,tsx,mts,cts",
-					`"--ignore-pattern=${argv.ignorePattern}"`,
+					`--ignore-pattern="${argv.ignorePattern}"`,
 					`--importConfig=${importConfig}`,
 					// The transforms are published as JS compatible with the supported Node.js versions.
 					"--no-babel",
@@ -74,6 +80,9 @@ async function main() {
 
 				if (dry) {
 					args.push("--dry");
+				}
+				if (argv.ignoreConfig) {
+					args.push(`--ignore-config="${argv.ignoreConfig}"`);
 				}
 				if (verbose) {
 					args.push("--print");

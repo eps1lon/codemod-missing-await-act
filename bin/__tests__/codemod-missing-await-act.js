@@ -27,7 +27,10 @@ describe("codemod-missing-await-act", () => {
 		  --version         Show version number                                [boolean]
 		  --help            Show help                                          [boolean]
 		  --dry                                               [boolean] [default: false]
-		  --ignore-pattern                      [string] [default: "**/node_modules/**"]
+		  --ignore-config   ignore files if they match patterns sourced from a
+		                    configuration file (e.g. a .gitignore)              [string]
+		  --ignore-pattern  ignore files that match a provided glob expression
+		                                        [string] [default: "**/node_modules/**"]
 		  --import-config   A path to a JS file importing all methods whose calls should
 		                    be awaited.                                         [string]
 		  --verbose                                           [boolean] [default: false]
