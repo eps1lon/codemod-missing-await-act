@@ -44,7 +44,7 @@ Right now we assume that any call to `rerender` and `unmount` should be awaited.
 The following methods will be awaited when the codemod is applied by default:
 
 ```js
-// codemod-missing-await/default-iport-config.mjs
+// codemod-missing-await/default-iport-config.js
 // Import aliases have no effect on the codemod.
 // They're only used to not cause JS Syntax errors.
 // The codemod will only consider the imported name.
@@ -83,7 +83,7 @@ import { renderWithProviders } from "@mycompany/testing-library";
 
 Now the codemod will also add an `await` to any `renderWithProviders` call imported from `@mycompany/testing-library`.
 
-By default, the codemod uses the code listed in [codemod-missing-await/default-import-config.mks](./default-import-config.mjs).
+By default, the codemod uses the code listed in [codemod-missing-await/default-import-config.js](./default-import-config.js).
 
 ## Getting started
 
@@ -107,19 +107,24 @@ $ npx codemod-missing-await-act
 codemod-missing-await-act <paths...>
 
 Positionals:
-  paths                                               [string] [required]
+  paths                                                      [string] [required]
 
 Options:
-  --version         Show version number                         [boolean]
-  --help            Show help                                   [boolean]
-  --dry                                        [boolean] [default: false]
-  --ignore-pattern               [string] [default: "**/node_modules/**"]
-  --verbose                                    [boolean] [default: false]
+  --version         Show version number                                [boolean]
+  --help            Show help                                          [boolean]
+  --dry                                               [boolean] [default: false]
+  --ignore-pattern                      [string] [default: "**/node_modules/**"]
+  --import-config   A path to a JS file importing all methods whose calls should
+                    be awaited.                                         [string]
+  --verbose                                           [boolean] [default: false]
 
 Examples:
-  codemod-missing-await-act ./              Ignores `node_modules` and
-  --ignore-pattern                      `build` folders
+  codemod-missing-await-act ./              Ignores `node_modules` and `build`
+  --ignore-pattern                          folders
   "**/{node_modules,build}/**"
+  codemod-missing-await-act ./              Adds await to to all calls of
+  --import-confg                            methods imported in that file.
+  ./missing-await-import-config.js
 ```
 
 ## Limitations

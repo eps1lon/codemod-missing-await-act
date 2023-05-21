@@ -7,7 +7,7 @@ const codemodMissingAwaitTransform = require("../codemod-missing-await-act");
 function applyTransform(
 	source,
 	options = {
-		importConfig: path.resolve(__dirname, "../../default-import-config.mjs"),
+		importConfig: path.resolve(__dirname, "../../default-import-config.js"),
 	}
 ) {
 	return JscodeshiftTestUtils.applyTransform(

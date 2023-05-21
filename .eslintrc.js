@@ -12,7 +12,7 @@ module.exports = {
 	rules: {},
 	overrides: [
 		{
-			files: ["default-import-config.mjs"],
+			files: ["default-import-config.js"],
 			parserOptions: { sourceType: "module" },
 			rules: {
 				"no-unused-vars": "off",

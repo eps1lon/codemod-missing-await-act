@@ -1,5 +1,5 @@
 // Import aliases have no effect on the codemod.
-// They're only used to not cause JS Syntax errors.
+// They're only used to not cause JS Syntax errors in this file.
 // The codemod will only consider the imported name.
 import {
 	act,

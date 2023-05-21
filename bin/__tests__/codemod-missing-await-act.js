@@ -28,12 +28,17 @@ describe("codemod-missing-await-act", () => {
 		  --help            Show help                                          [boolean]
 		  --dry                                               [boolean] [default: false]
 		  --ignore-pattern                      [string] [default: "**/node_modules/**"]
+		  --import-config   A path to a JS file importing all methods whose calls should
+		                    be awaited.                                         [string]
 		  --verbose                                           [boolean] [default: false]
 
 		Examples:
 		  codemod-missing-await-act ./              Ignores \`node_modules\` and \`build\`
 		  --ignore-pattern                          folders
 		  "**/{node_modules,build}/**"
+		  codemod-missing-await-act ./              Adds await to to all calls of
+		  --import-confg                            methods imported in that file.
+		  ./missing-await-import-config.js
 		",
 		}
 	`);

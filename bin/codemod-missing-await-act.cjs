@@ -31,6 +31,8 @@ async function main() {
 							type: "string",
 						})
 						.option("import-config", {
+							description:
+								"A path to a JS file importing all methods whose calls should be awaited.",
 							type: "string",
 						})
 						.option("verbose", { default: false, type: "boolean" })
@@ -38,6 +40,10 @@ async function main() {
 						.example(
 							'$0 ./ --ignore-pattern "**/{node_modules,build}/**"',
 							"Ignores `node_modules` and `build` folders"
+						)
+						.example(
+							"$0 ./ --import-confg ./missing-await-import-config.js",
+							"Adds await to to all calls of methods imported in that file."
 						)
 						.demandOption(["paths"])
 				);
@@ -47,7 +53,7 @@ async function main() {
 				const importConfig =
 					typeof importConfigArg === "string"
 						? path.resolve(importConfigArg)
-						: path.resolve(__dirname, "../default-import-config.mjs");
+						: path.resolve(__dirname, "../default-import-config.js");
 
 				// TODO: npx instead?
 				const jscodeshiftExecutable = require.resolve(
