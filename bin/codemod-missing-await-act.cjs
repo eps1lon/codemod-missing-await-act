@@ -30,17 +30,30 @@ async function main() {
 							default: "**/node_modules/**",
 							type: "string",
 						})
+						.option("import-config", {
+							description:
+								"A path to a JS file importing all methods whose calls should be awaited.",
+							type: "string",
+						})
 						.option("verbose", { default: false, type: "boolean" })
 						// Ignoring `build`: https://www.digitalocean.com/community/tools/glob?comments=true&glob=%2A%2A%2F%7Bnode_modules%2Cbuild%7D%2F%2A%2A&matches=false&tests=package%2Fnode_modules%2Ftest.js&tests=package%2Fbuild%2Ftest.js&tests=package%2Ftest.js
 						.example(
 							'$0 ./ --ignore-pattern "**/{node_modules,build}/**"',
 							"Ignores `node_modules` and `build` folders"
 						)
+						.example(
+							"$0 ./ --import-confg ./missing-await-import-config.js",
+							"Adds await to to all calls of methods imported in that file."
+						)
 						.demandOption(["paths"])
 				);
 			},
 			async (argv) => {
-				const { dry, paths, verbose } = argv;
+				const { dry, importConfig: importConfigArg, paths, verbose } = argv;
+				const importConfig =
+					typeof importConfigArg === "string"
+						? path.resolve(importConfigArg)
+						: path.resolve(__dirname, "../default-import-config.js");
 
 				// TODO: npx instead?
 				const jscodeshiftExecutable = require.resolve(
@@ -53,6 +66,7 @@ async function main() {
 				const args = [
 					"--extensions=js,jsx,mjs,cjs,ts,tsx,mts,cts",
 					`"--ignore-pattern=${argv.ignorePattern}"`,
+					`--importConfig=${importConfig}`,
 					// The transforms are published as JS compatible with the supported Node.js versions.
 					"--no-babel",
 					`--transform ${path.join(transformsRoot, `${codemod}.js`)}`,

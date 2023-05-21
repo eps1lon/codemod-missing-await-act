@@ -10,4 +10,13 @@ module.exports = {
 		sourceType: "script",
 	},
 	rules: {},
+	overrides: [
+		{
+			files: ["default-import-config.js"],
+			parserOptions: { sourceType: "module" },
+			rules: {
+				"no-unused-vars": "off",
+			},
+		},
+	],
 };
