@@ -292,19 +292,29 @@ const codemodMissingAwaitActTransform = (file, api, options) => {
 				if (bindingPath.parentPath?.isImportDeclaration()) {
 					const importDeclaration = bindingPath.parentPath.node;
 					const importSource = importDeclaration.source.value;
-					const importSpecifier =
-						/** @type {t.ImportNamespaceSpecifier | t.ImportSpecifier} */ (
-							bindingPath.node
-						);
-					// import * as foo from '...'
-					//             ^^^ local
-					// import { act as rtlAct } from '...'
-					//                 ^^^^^^ local
-					//          ^^^ imported
-					const callee =
-						importSpecifier.type === "ImportNamespaceSpecifier"
-							? importSpecifier.local
-							: importSpecifier.imported;
+					const importSpecifier = bindingPath.node;
+
+					let callee;
+					switch (importSpecifier.type) {
+						// import * as foo from '...'
+						//             ^^^ local
+						// import foo from '...'
+						//        ^^^ local
+						case "ImportDefaultSpecifier":
+						case "ImportNamespaceSpecifier":
+							callee = importSpecifier.local;
+							break;
+						// import { act as rtlAct } from '...'
+						//                 ^^^^^^ local
+						//          ^^^ imported
+						case "ImportSpecifier":
+							callee = importSpecifier.imported;
+							break;
+						default:
+							throw new Error(
+								`Can't resolve callee for import specifier of type '${importSpecifier.type}'`
+							);
+					}
 					return { callee, importSource: importSource };
 				}
 			}
