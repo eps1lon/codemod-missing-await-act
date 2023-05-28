@@ -1,18 +1,30 @@
 const { afterEach, expect, jest, test } = require("@jest/globals");
 const { default: dedent } = require("dedent-tabs");
+const fs = require("fs/promises");
 const JscodeshiftTestUtils = require("jscodeshift/dist/testUtils");
+const os = require("os");
 const path = require("path");
 const codemodMissingAwaitTransform = require("../codemod-missing-await-act");
 
-function applyTransform(
-	source,
-	options = {
+async function applyTransform(source, options = {}) {
+	const transformOptions = {
+		...options,
 		importConfig: path.resolve(__dirname, "../../default-import-config.js"),
+	};
+	const { importConfigSource } = options;
+	if (importConfigSource !== undefined) {
+		const importConfigPath = path.join(
+			os.tmpdir(),
+			"codemod-missing-await-act/fixtures/import-config.js"
+		);
+		await fs.mkdir(path.dirname(importConfigPath), { recursive: true });
+		await fs.writeFile(importConfigPath, importConfigSource);
+		transformOptions.importConfig = importConfigPath;
 	}
-) {
+
 	return JscodeshiftTestUtils.applyTransform(
 		codemodMissingAwaitTransform,
-		options,
+		transformOptions,
 		{
 			path: "test.tsx",
 			source: dedent(source),
@@ -24,8 +36,8 @@ afterEach(() => {
 	jest.restoreAllMocks();
 });
 
-test("act in test", () => {
-	expect(
+test("act in test", async () => {
+	await expect(
 		applyTransform(`
 			import { act } from "@testing-library/react"
 			test("void works", () => {
@@ -35,7 +47,7 @@ test("act in test", () => {
 				return act()
 			})
 		`)
-	).toMatchInlineSnapshot(`
+	).resolves.toMatchInlineSnapshot(`
 		"import { act } from "@testing-library/react"
 		test("void works", async () => {
 			await act()
@@ -46,15 +58,15 @@ test("act in test", () => {
 	`);
 });
 
-test("act import alias in test", () => {
-	expect(
+test("act import alias in test", async () => {
+	await expect(
 		applyTransform(`
 			import { act as rtlAct } from "@testing-library/react"
 			const act = scope => {
 				rtlAct(scope)
 			}
 		`)
-	).toMatchInlineSnapshot(`
+	).resolves.toMatchInlineSnapshot(`
 		"import { act as rtlAct } from "@testing-library/react"
 		const act = async scope => {
 			await rtlAct(scope)
@@ -62,15 +74,15 @@ test("act import alias in test", () => {
 	`);
 });
 
-test("local act untouched", () => {
-	expect(
+test("local act untouched", async () => {
+	await expect(
 		applyTransform(`
 			function act() {}
 			test("void works", () => {
 				act()
 			})
 	`)
-	).toMatchInlineSnapshot(`
+	).resolves.toMatchInlineSnapshot(`
 		"function act() {}
 		test("void works", () => {
 			act()
@@ -78,8 +90,8 @@ test("local act untouched", () => {
 	`);
 });
 
-test("act in utils #1", () => {
-	expect(
+test("act in utils #1", async () => {
+	await expect(
 		applyTransform(`
 			import { act } from "@testing-library/react"
 			function caseA() {
@@ -95,7 +107,7 @@ test("act in utils #1", () => {
 				return test
 			}
 		`)
-	).toMatchInlineSnapshot(`
+	).resolves.toMatchInlineSnapshot(`
 		"import { act } from "@testing-library/react"
 		function caseA() {
 			return act()
@@ -112,8 +124,8 @@ test("act in utils #1", () => {
 	`);
 });
 
-test("act in utils #2", () => {
-	expect(
+test("act in utils #2", async () => {
+	await expect(
 		applyTransform(`
 			import { act } from "@testing-library/react"
 			function caseA() {
@@ -130,7 +142,7 @@ test("act in utils #2", () => {
 				return test
 			}
 		`)
-	).toMatchInlineSnapshot(`
+	).resolves.toMatchInlineSnapshot(`
 		"import { act } from "@testing-library/react"
 		async function caseA() {
 			await act()
@@ -148,8 +160,8 @@ test("act in utils #2", () => {
 	`);
 });
 
-test("act in utils #3", () => {
-	expect(
+test("act in utils #3", async () => {
+	await expect(
 		applyTransform(`
 			import { act } from "@testing-library/react"
 			const caseA = () => {
@@ -164,7 +176,7 @@ test("act in utils #3", () => {
 				return test
 			}
 		`)
-	).toMatchInlineSnapshot(`
+	).resolves.toMatchInlineSnapshot(`
 		"import { act } from "@testing-library/react"
 		const caseA = async () => {
 			await act()
@@ -180,8 +192,8 @@ test("act in utils #3", () => {
 	`);
 });
 
-test("React Testing Library api", () => {
-	expect(
+test("React Testing Library api", async () => {
+	await expect(
 		applyTransform(`
 			import {
 				cleanup,
@@ -226,7 +238,7 @@ test("React Testing Library api", () => {
 			});
 		
 		`)
-	).toMatchInlineSnapshot(`
+	).resolves.toMatchInlineSnapshot(`
 		"import {
 			cleanup,
 			fireEvent,
@@ -268,8 +280,8 @@ test("React Testing Library api", () => {
 	`);
 });
 
-test("React Testing Library api as namespace", () => {
-	expect(
+test("React Testing Library api as namespace", async () => {
+	await expect(
 		applyTransform(`
 			import * as RTL from "@testing-library/react";
 			
@@ -308,7 +320,7 @@ test("React Testing Library api as namespace", () => {
 			});
 		
 		`)
-	).toMatchInlineSnapshot(`
+	).resolves.toMatchInlineSnapshot(`
 		"import * as RTL from "@testing-library/react";
 
 		beforeEach(async () => {
@@ -344,8 +356,8 @@ test("React Testing Library api as namespace", () => {
 	`);
 });
 
-test("react API", () => {
-	expect(
+test("react API", async () => {
+	await expect(
 		applyTransform(`
 			import * as React from 'react'
 			
@@ -353,7 +365,7 @@ test("react API", () => {
 				React.unstable_act()
 			})
 		`)
-	).toMatchInlineSnapshot(`
+	).resolves.toMatchInlineSnapshot(`
 		"import * as React from 'react'
 
 		test('test', async () => {
@@ -362,8 +374,8 @@ test("react API", () => {
 	`);
 });
 
-test("react-test-renderer API", () => {
-	expect(
+test("react-test-renderer API", async () => {
+	await expect(
 		applyTransform(`
 			import { act } from 'react-test-renderer'
 			
@@ -371,7 +383,7 @@ test("react-test-renderer API", () => {
 				act()
 			})
 		`)
-	).toMatchInlineSnapshot(`
+	).resolves.toMatchInlineSnapshot(`
 		"import { act } from 'react-test-renderer'
 
 		test('test', async () => {
@@ -380,8 +392,8 @@ test("react-test-renderer API", () => {
 	`);
 });
 
-test("react-dom API", () => {
-	expect(
+test("react-dom API", async () => {
+	await expect(
 		applyTransform(`
 			import { act } from 'react-dom/test-utils'
 			import { flushSync } from 'react-dom'
@@ -391,7 +403,7 @@ test("react-dom API", () => {
 				flushSync()
 			})
 		`)
-	).toMatchInlineSnapshot(`
+	).resolves.toMatchInlineSnapshot(`
 		"import { act } from 'react-dom/test-utils'
 		import { flushSync } from 'react-dom'
 
@@ -402,15 +414,15 @@ test("react-dom API", () => {
 	`);
 });
 
-test("intentional interleaving is stopped", () => {
-	expect(
+test("intentional interleaving is stopped", async () => {
+	await expect(
 		applyTransform(`
 			import { act } from '@testing-library/react'
 			test('test', () => {
 				Promise.all([act(), act()])
 			})
 		`)
-	).toMatchInlineSnapshot(`
+	).resolves.toMatchInlineSnapshot(`
 		"import { act } from '@testing-library/react'
 		test('test', async () => {
 			Promise.all([await act(), await act()])
@@ -419,7 +431,7 @@ test("intentional interleaving is stopped", () => {
 });
 
 // Found in facebook/react
-test.failing("already async act", () => {
+test.failing("already async act", async () => {
 	// Code should be unchanged ideally.
 	const code = dedent`
 		import { act } from '@testing-library/react'
@@ -428,11 +440,11 @@ test.failing("already async act", () => {
 		})
 	`;
 
-	expect(applyTransform(code)).toEqual(code);
+	await expect(applyTransform(code)).toEqual(code);
 });
 
-test("only calls are codemodded", () => {
-	expect(
+test("only calls are codemodded", async () => {
+	await expect(
 		applyTransform(`
 			import { act } from '@testing-library/react'
 			test('test', async() => {
@@ -441,7 +453,7 @@ test("only calls are codemodded", () => {
 				const myAct = act
 			})
 		`)
-	).toMatchInlineSnapshot(`
+	).resolves.toMatchInlineSnapshot(`
 		"import { act } from '@testing-library/react'
 		test('test', async() => {
 			await act()
@@ -451,8 +463,8 @@ test("only calls are codemodded", () => {
 	`);
 });
 
-test.failing("reassignment is not tracked", () => {
-	expect(
+test.failing("reassignment is not tracked", async () => {
+	await expect(
 		applyTransform(`
 			import { act } from '@testing-library/react'
 			
@@ -471,8 +483,8 @@ test.failing("reassignment is not tracked", () => {
 	`);
 });
 
-test("does not add await to calls receiving newly async function as an argument", () => {
-	expect(
+test("does not add await to calls receiving newly async function as an argument", async () => {
+	await expect(
 		applyTransform(`
 			import { act } from 'react-dom/test-utils';
 			function runTests(test) {
@@ -483,7 +495,7 @@ test("does not add await to calls receiving newly async function as an argument"
 				test(render);
 			}
 		`)
-	).toMatchInlineSnapshot(`
+	).resolves.toMatchInlineSnapshot(`
 		"import { act } from 'react-dom/test-utils';
 		async function runTests(test) {
 			async function render(source) {
@@ -495,10 +507,10 @@ test("does not add await to calls receiving newly async function as an argument"
 	`);
 });
 
-test("export newly async warns (separate export statement)", () => {
+test("export newly async warns (separate export statement)", async () => {
 	jest.spyOn(console, "warn").mockImplementation(() => {});
 
-	expect(
+	await expect(
 		applyTransform(`
 			import { act as domAct } from 'react-dom/test-utils';
 			const act = scope => {
@@ -507,7 +519,7 @@ test("export newly async warns (separate export statement)", () => {
 			export default act
 			export { act, act as unstable_act, act as 'literal_act' }
 		`)
-	).toMatchInlineSnapshot(`
+	).resolves.toMatchInlineSnapshot(`
 		"import { act as domAct } from 'react-dom/test-utils';
 		const act = async scope => {
 			await domAct(scope)
@@ -515,7 +527,7 @@ test("export newly async warns (separate export statement)", () => {
 		export default act
 		export { act, act as unstable_act, act as 'literal_act' }"
 	`);
-	expect(console.warn.mock.calls).toEqual([
+	await expect(console.warn.mock.calls).toEqual([
 		[expect.stringContaining("test.tsx: Default export is now async.")],
 		[expect.stringContaining("test.tsx: Export 'act' is now async.")],
 		[expect.stringContaining("test.tsx: Export 'unstable_act' is now async.")],
@@ -523,10 +535,10 @@ test("export newly async warns (separate export statement)", () => {
 	]);
 });
 
-test("export newly async warns", () => {
+test("export newly async warns", async () => {
 	jest.spyOn(console, "warn").mockImplementation(() => {});
 
-	expect(
+	await expect(
 		applyTransform(`
 			import { act as domAct } from 'react-dom/test-utils';
 			export const act = scope => {
@@ -539,7 +551,7 @@ test("export newly async warns", () => {
 				domAct(scope)
 			}
 		`)
-	).toMatchInlineSnapshot(`
+	).resolves.toMatchInlineSnapshot(`
 		"import { act as domAct } from 'react-dom/test-utils';
 		export const act = async scope => {
 			await domAct(scope)
@@ -551,26 +563,45 @@ test("export newly async warns", () => {
 			await domAct(scope)
 		}"
 	`);
-	expect(console.warn.mock.calls).toEqual([
+	await expect(console.warn.mock.calls).toEqual([
 		[expect.stringContaining("test.tsx: Export 'act' is now async.")],
 		[expect.stringContaining("test.tsx: Export 'unstable_act' is now async.")],
 		[expect.stringContaining("test.tsx: Default export is now async.")],
 	]);
 });
 
-test("export newly async reassignment does not warn", () => {
+test("export newly async reassignment does not warn", async () => {
 	jest.spyOn(console, "warn").mockImplementation(() => {});
 
-	expect(
+	await expect(
 		applyTransform(`
 			import { act as domAct } from 'react-dom/test-utils';
 			// We only track CallExpressions :(
 			export const act = domAct;
 		`)
-	).toMatchInlineSnapshot(`
+	).resolves.toMatchInlineSnapshot(`
 		"import { act as domAct } from 'react-dom/test-utils';
 		// We only track CallExpressions :(
 		export const act = domAct;"
 	`);
-	expect(console.warn.mock.calls).toEqual([]);
+	await expect(console.warn.mock.calls).toEqual([]);
+});
+
+test.only("import config with default export", async () => {
+	await expect(
+		applyTransform(
+			`
+			import render from '../render';
+			test('works', () => {
+				render(null)
+			})
+		`,
+			{ importConfigSource: "import render from '../render'" }
+		)
+	).resolves.toMatchInlineSnapshot(`
+		"import render from '../render';
+		test('works', async () => {
+			await render(null)
+		})"
+	`);
 });
