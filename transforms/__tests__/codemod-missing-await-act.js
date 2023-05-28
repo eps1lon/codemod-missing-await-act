@@ -495,7 +495,7 @@ test("does not add await to calls receiving newly async function as an argument"
 	`);
 });
 
-test("export newly async warns", () => {
+test("export newly async warns (separate export statement)", () => {
 	jest.spyOn(console, "warn").mockImplementation(() => {});
 
 	expect(
@@ -520,6 +520,41 @@ test("export newly async warns", () => {
 		[expect.stringContaining("test.tsx: Export 'act' is now async.")],
 		[expect.stringContaining("test.tsx: Export 'unstable_act' is now async.")],
 		[expect.stringContaining("test.tsx: Export 'literal_act' is now async.")],
+	]);
+});
+
+test("export newly async warns", () => {
+	jest.spyOn(console, "warn").mockImplementation(() => {});
+
+	expect(
+		applyTransform(`
+			import { act as domAct } from 'react-dom/test-utils';
+			export const act = scope => {
+				domAct(scope)
+			}
+			export function unstable_act(scope) {
+				domAct(scope)
+			}
+			export default function default_act(scope) {
+				domAct(scope)
+			}
+		`)
+	).toMatchInlineSnapshot(`
+		"import { act as domAct } from 'react-dom/test-utils';
+		export const act = async scope => {
+			await domAct(scope)
+		}
+		export async function unstable_act(scope) {
+			await domAct(scope)
+		}
+		export default async function default_act(scope) {
+			await domAct(scope)
+		}"
+	`);
+	expect(console.warn.mock.calls).toEqual([
+		[expect.stringContaining("test.tsx: Export 'act' is now async.")],
+		[expect.stringContaining("test.tsx: Export 'unstable_act' is now async.")],
+		[expect.stringContaining("test.tsx: Default export is now async.")],
 	]);
 });
 

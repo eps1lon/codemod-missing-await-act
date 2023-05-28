@@ -230,6 +230,46 @@ const codemodMissingAwaitActTransform = (file, api, options) => {
 							);
 							warnedExports.add(exportName);
 						}
+					} else if (referencePath.node.type === "ExportNamedDeclaration") {
+						const declaration = /** @type {t.Declaration} */ (
+							referencePath.node.declaration
+						);
+						// export const
+						if (declaration.type === "VariableDeclaration") {
+							const id = declaration.declarations[0].id;
+							if (id.type === "Identifier") {
+								const exportName = id.name;
+								if (!warnedExports.has(exportName)) {
+									console.warn(
+										`${file.path}: Export '${exportName}' is now async. ` +
+											`Make sure to update the rules of this codemod and run it again.`
+									);
+									warnedExports.add(exportName);
+								}
+							}
+						} else if (declaration.type === "FunctionDeclaration") {
+							// `export function` needs to have an identifier
+							// `export function() {}` would be a syntax error
+							const id = /** @type {t.Identifier} */ (declaration.id);
+							const exportName = id.name;
+							if (!warnedExports.has(exportName)) {
+								console.warn(
+									`${file.path}: Export '${exportName}' is now async. ` +
+										`Make sure to update the rules of this codemod and run it again.`
+								);
+								warnedExports.add(exportName);
+							}
+						}
+					} else if (referencePath.type === "ExportDefaultDeclaration") {
+						const exportName = "default";
+
+						if (!warnedExports.has(exportName)) {
+							console.warn(
+								`${file.path}: Default export is now async. ` +
+									`Make sure to update the rules of this codemod and run it again.`
+							);
+							warnedExports.add(exportName);
+						}
 					}
 				});
 			}
