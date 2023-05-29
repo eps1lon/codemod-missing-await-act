@@ -280,6 +280,94 @@ test("React Testing Library api", async () => {
 	`);
 });
 
+test("React Native Testing Library api", async () => {
+	await expect(
+		applyTransform(`
+			import {
+				cleanup,
+				fireEvent,
+				render,
+				renderHook,
+				screen,
+			} from "@testing-library/react-native";
+			
+			beforeEach(() => {
+				cleanup();
+			});
+			
+			function renderWithProviders(element) {
+				const { rerender, unmount } = render(<TestProvider>{element}</TestProvider>);
+			
+				return { rerender, unmount };
+			}
+			
+			test("test", () => {
+				const { rerender, unmount } = renderWithProviders(<button>Test</button>);
+			
+				fireEvent.click(screen.getByRole("button"));
+			
+				rerender(<span />);
+			
+				fireEvent(
+					screen.getByRole("button"),
+					new MouseEvent("click", {
+						bubbles: true,
+						cancelable: true,
+					})
+				);
+			
+				unmount();
+			});
+			
+			test("renderHook", () => {
+				const { result, unmount } = renderHook(() => useHook());
+			
+				unmount();
+			});
+		
+		`)
+	).resolves.toMatchInlineSnapshot(`
+		"import {
+			cleanup,
+			fireEvent,
+			render,
+			renderHook,
+			screen,
+		} from "@testing-library/react-native";
+
+		beforeEach(async () => {
+			await cleanup();
+		});
+
+		async function renderWithProviders(element) {
+			const { rerender, unmount } = await render(<TestProvider>{element}</TestProvider>);
+
+			return { rerender, unmount };
+		}
+
+		test("test", async () => {
+			const { rerender, unmount } = await renderWithProviders(<button>Test</button>);
+
+			await fireEvent.click(screen.getByRole("button"));
+
+			await rerender(<span />);
+
+			await fireEvent(screen.getByRole("button"), new MouseEvent("click", {
+		        bubbles: true,
+		        cancelable: true,
+		    }));
+
+			await unmount();
+		});
+
+		test("renderHook", async () => {
+			const { result, unmount } = await renderHook(() => useHook());
+
+			await unmount();
+		});"
+	`);
+});
+
 test("React Testing Library api as namespace", async () => {
 	await expect(
 		applyTransform(`
