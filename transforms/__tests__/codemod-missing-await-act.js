@@ -7,8 +7,9 @@ const path = require("path");
 const codemodMissingAwaitTransform = require("../codemod-missing-await-act");
 
 async function applyTransform(source, options = {}) {
+	const { filePath = "test.js", ...providedTransformOptions } = options;
 	const transformOptions = {
-		...options,
+		...providedTransformOptions,
 		importConfig: path.resolve(__dirname, "../../default-import-config.js"),
 	};
 	const { importConfigSource } = options;
@@ -26,7 +27,7 @@ async function applyTransform(source, options = {}) {
 		codemodMissingAwaitTransform,
 		transformOptions,
 		{
-			path: "test.tsx",
+			path: filePath,
 			source: dedent(source),
 		}
 	);
@@ -690,6 +691,30 @@ test("import config with default export", async () => {
 		"import render from '../render';
 		test('works', async () => {
 			await render(null)
+		})"
+	`);
+});
+
+test("React Component syntax", async () => {
+	await expect(
+		applyTransform(
+			`
+			import { render } from "@testing-library/react"
+			test("void works", () => {
+				component Foo() {
+					return <div />
+				}
+				render(<Foo />)
+			})
+		`
+		)
+	).resolves.toMatchInlineSnapshot(`
+		"import { render } from "@testing-library/react"
+		test("void works", async () => {
+			component Foo() {
+				return <div />
+			}
+			await render(<Foo />)
 		})"
 	`);
 });

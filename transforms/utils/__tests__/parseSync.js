@@ -47,4 +47,13 @@ describe("parseSync", () => {
 			})
 		).not.toThrow();
 	});
+
+	test("React Component syntax", () => {
+		expect(() =>
+			parseSync({
+				path: "test.js",
+				source: `component Test() { return null }`,
+			})
+		).not.toThrow();
+	});
 });
