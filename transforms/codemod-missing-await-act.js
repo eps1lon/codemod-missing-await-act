@@ -29,18 +29,19 @@ function getBindingFromFunctionPath(path) {
 }
 
 /**
- * @type {t.Node | null}
+ * @type {Map<string, t.Node | undefined>}
  */
-let importConfigAst = null;
+const importConfigAsts = new Map();
 
 /**
  * True if the call looks like a call of act() or contains a call to act().
  * For local bindings we hardcoded some names (e.g. rerender and unmount).
  * For imported bindings we match the imports of the `importConfigAst`.
+ * @param {t.Node} importConfigAst
  * @param {t.CallExpression['callee'] | t.PrivateName} callee
  * @param {string | undefined} importSource undefined if the callee has a local binding
  */
-function isActOrCallsAct(callee, importSource) {
+function isActOrCallsAct(importConfigAst, callee, importSource) {
 	// rerender
 	if (
 		importSource === undefined &&
@@ -138,14 +139,17 @@ const codemodMissingAwaitActTransform = (file, api, options) => {
 		return;
 	}
 
-	if (importConfigAst === null) {
+	let maybeImportConfigAst = importConfigAsts.get(options.importConfig);
+	if (maybeImportConfigAst === undefined) {
 		const importConfigSource = fs.readFileSync(options.importConfig, {
 			encoding: "utf-8",
 		});
-		importConfigAst = babylon.parse(importConfigSource, {
+		maybeImportConfigAst = babylon.parse(importConfigSource, {
 			sourceType: "module",
 		}).program;
+		importConfigAsts.set(options.importConfig, maybeImportConfigAst);
 	}
+	const importConfigAst = /** @type {t.Node} */ (maybeImportConfigAst);
 
 	const ast = parseSync(file);
 	/** @type {Set<string>} */
@@ -358,7 +362,11 @@ const codemodMissingAwaitActTransform = (file, api, options) => {
 	traverse(traverseRoot, {
 		CallExpression(path) {
 			const { callee, importSource } = getCalleeAndModuleName(path);
-			const shouldHaveAwait = isActOrCallsAct(callee, importSource);
+			const shouldHaveAwait = isActOrCallsAct(
+				importConfigAst,
+				callee,
+				importSource
+			);
 
 			if (shouldHaveAwait) {
 				ensureAwait(path);

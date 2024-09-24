@@ -675,7 +675,7 @@ test("export newly async reassignment does not warn", async () => {
 	await expect(console.warn.mock.calls).toEqual([]);
 });
 
-test.only("import config with default export", async () => {
+test("import config with default export", async () => {
 	await expect(
 		applyTransform(
 			`
