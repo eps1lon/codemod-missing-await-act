@@ -1,5 +1,11 @@
 # codemod-missing-await-act
 
+## 0.2.1
+
+### Patch Changes
+
+- [#26](https://github.com/eps1lon/codemod-missing-await-act/pull/26) [`c74e8af`](https://github.com/eps1lon/codemod-missing-await-act/commit/c74e8afc7ebf354b15b6d98bc0ff17258e5f0f06) Thanks [@eps1lon](https://github.com/eps1lon)! - Ensure different import configs can be used during module lifetime
+
 ## 0.2.0
 
 ### Minor Changes
