@@ -3,6 +3,8 @@ const babylon = require("@babel/parser");
 const t = require("@babel/types");
 const traverse = require("@babel/traverse").default;
 const fs = require("fs");
+const { dirname, extname, resolve } = require("path");
+const { fileURLToPath } = require("url");
 
 /**
  * @param {babel.NodePath<t.Function>} path
@@ -39,9 +41,15 @@ const importConfigAsts = new Map();
  * For imported bindings we match the imports of the `importConfigAst`.
  * @param {t.Node} importConfigAst
  * @param {t.CallExpression['callee'] | t.PrivateName} callee
+ * @param {string} calleeModulePath The absolute path to the module containing {@link callee}
  * @param {string | undefined} importSource undefined if the callee has a local binding
  */
-function isActOrCallsAct(importConfigAst, callee, importSource) {
+function isActOrCallsAct(
+	importConfigAst,
+	callee,
+	calleeModulePath,
+	importSource
+) {
 	// rerender
 	if (
 		importSource === undefined &&
@@ -74,7 +82,47 @@ function isActOrCallsAct(importConfigAst, callee, importSource) {
 	traverse(importConfigAst, {
 		ImportDeclaration(path) {
 			const { source, specifiers } = path.node;
-			if (source.value === importSource) {
+
+			function importSourcesMatch() {
+				// source.value = file:///Users/sebbie/utils.js
+				// importSource = ./utils.js
+				if (source.value === importSource) {
+					return true;
+				}
+
+				let sourceValue = source.value;
+				// If the importSource isn't a relative import, we don't even need to consider
+				// filepaths since we don't implement full module resolution.
+				if (
+					importSource?.startsWith(".") &&
+					sourceValue.startsWith("file://")
+				) {
+					try {
+						sourceValue = fileURLToPath(sourceValue);
+					} catch (cause) {
+						throw new Error(
+							"Failed to parse URL from source value: " + sourceValue,
+							// @ts-expect-error -- Types don't know about `cause` yet.
+							{ cause }
+						);
+					}
+					const absoluteImportSource = resolve(
+						dirname(resolve(process.cwd(), calleeModulePath)),
+						importSource
+					);
+
+					return (
+						absoluteImportSource === sourceValue ||
+						// support extension-less, relative imports
+						absoluteImportSource ===
+							sourceValue.replace(extname(sourceValue), "")
+					);
+				}
+
+				return false;
+			}
+
+			if (importSourcesMatch()) {
 				isActOrCallsAct =
 					isActOrCallsAct ||
 					specifiers.some((specifier) => {
@@ -365,6 +413,7 @@ const codemodMissingAwaitActTransform = (file, api, options) => {
 			const shouldHaveAwait = isActOrCallsAct(
 				importConfigAst,
 				callee,
+				file.path,
 				importSource
 			);
 

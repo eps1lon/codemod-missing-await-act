@@ -12,11 +12,18 @@ module.exports = {
 	rules: {},
 	overrides: [
 		{
-			files: ["default-import-config.js"],
+			files: [
+				"default-import-config.js",
+				"bin/__tests__/__fixtures__/**/import-config.js",
+			],
 			parserOptions: { sourceType: "module" },
 			rules: {
 				"no-unused-vars": "off",
 			},
+		},
+		{
+			files: ["bin/__tests__/__fixtures__/**"],
+			parserOptions: { sourceType: "module" },
 		},
 	],
 };
