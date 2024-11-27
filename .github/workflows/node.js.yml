@@ -7,7 +7,29 @@ on:
     branches: [main]
 
 jobs:
-  build:
+  static:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      # #nodejs-suppport -- use highest LTS version
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22.x
+      - run: yarn install --immutable --immutable-cache
+      - name: Check Yarn cache
+        # Only run on forks
+        if: github.repository_owner != 'eps1lon'
+        run: yarn --check-cache
+      - run: yarn test:lint
+      - run: yarn test:types
+      - run: yarn format:check
+      - run: yarn test:renovate
+      # for manual inspection of included files
+      - run: npm pack
+
+  test-runtime:
     runs-on: ubuntu-latest
 
     strategy:
@@ -24,14 +46,4 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - run: yarn install --immutable --immutable-cache
-      - name: Check Yarn cache
-        # Only run on forks
-        if: github.repository_owner != 'eps1lon'
-        run: yarn --check-cache
       - run: yarn test:unit --coverage --runInBand
-      - run: yarn test:lint
-      - run: yarn test:types
-      - run: yarn format:check
-      - run: yarn test:renovate
-      # for manual inspection of included files
-      - run: npm pack
