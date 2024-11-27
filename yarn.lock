@@ -3031,7 +3031,7 @@ __metadata:
     "@types/jscodeshift": ^0.12.0
     "@types/node": ^18.0.0
     "@types/yargs": ^17.0.10
-    dedent: ^0.7.0
+    dedent: ^1.0.0
     dedent-tabs: ^0.10.3
     eslint: ^8.12.0
     inquirer: ^9.0.0
@@ -3249,13 +3249,6 @@ __metadata:
   version: 0.10.3
   resolution: "dedent-tabs@npm:0.10.3"
   checksum: 6b728238f604be22d29db99e75ad2ea1694f3086912e88948253680e524f17b7c5c9f69d7dbbbfb1e9bd89e2a7edbe3d771d92129ff54c8f069eaa07da623fda
-  languageName: node
-  linkType: hard
-
-"dedent@npm:^0.7.0":
-  version: 0.7.0
-  resolution: "dedent@npm:0.7.0"
-  checksum: 87de191050d9a40dd70cad01159a0bcf05ecb59750951242070b6abf9569088684880d00ba92a955b4058804f16eeaf91d604f283929b4f614d181cd7ae633d2
   languageName: node
   linkType: hard
 
