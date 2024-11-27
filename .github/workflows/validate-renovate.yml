@@ -1,0 +1,22 @@
+name: Validate Renovate config
+
+on:
+  push:
+    # run everytime on main to catch conflicting merges
+    branches: [main]
+  pull_request:
+    branches: [main]
+    paths: [".github/renovate.json"]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      # #nodejs-suppport -- use highest LTS version
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22.x
+      - run: yarn test:renovate
