@@ -25,6 +25,7 @@ const baseParserOptions = {
 		"exportNamespaceFrom",
 		"functionBind",
 		"functionSent",
+		"importAssertions",
 		"importMeta",
 		"nullishCoalescingOperator",
 		"numericSeparator",
