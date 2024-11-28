@@ -1,11 +1,11 @@
 # codemod-missing-await-act
 
-Adds missing `await` to `act` calls or methods that like contain an `act` call using [jscodeshift](https://github.com/facebook/jscodeshift).
-We all track usage of these methods throughout the file.
+Adds missing `await` to `act` calls or methods that contain an `act` call using [jscodeshift](https://github.com/facebook/jscodeshift).
+The codemod propagates these changes throughout the file.
 For example, given
 
 ```tsx
-import { act } from "react-dom/test-utils";
+import { act } from "react";
 
 function focus(element) {
 	act(() => {
@@ -24,7 +24,7 @@ will add an `await` to `act` and also add `await` to `focus` since `focus` is no
 The end result will be
 
 ```tsx
-import { act } from "react-dom/test-utils";
+import { act } from "react";
 
 async function focus(element) {
 	await act(() => {
@@ -40,6 +40,53 @@ test("focusing", async () => {
 ```
 
 Right now we assume that any call to `rerender` and `unmount` should be awaited.
+
+## Getting started
+
+```bash
+$ npx codemod-missing-await-act ./src
+Processing 4 files...
+All done.
+Results:
+0 errors
+3 unmodified
+0 skipped
+1 ok
+Time elapsed: 0.428seconds
+```
+
+## Usage
+
+```bash
+$ npx codemod-missing-await-act
+
+codemod-missing-await-act <paths...>
+
+Positionals:
+  paths                                                      [string] [required]
+
+Options:
+  --version         Show version number                                [boolean]
+  --help            Show help                                          [boolean]
+  --dry                                               [boolean] [default: false]
+  --ignore-pattern                      [string] [default: "**/node_modules/**"]
+  --import-config   A path to a JS file importing all methods whose calls should
+                    be awaited.                                         [string]
+  --verbose                                           [boolean] [default: false]
+
+Examples:
+  codemod-missing-await-act ./              Ignores `node_modules` and `build`
+  --ignore-pattern                          folders
+  "**/{node_modules,build}/**"
+  codemod-missing-await-act ./              Adds await to to all calls of
+  --import-confg                            methods imported in that file.
+  ./missing-await-import-config.js
+```
+
+### Custom import config
+
+When a newly async function is exported, the codemod will not automatically update all references.
+However, the codemod summarizes at the end which files are impacted and will generate an import config that can be used to update the remaining references if these are imported via relative imports.
 
 <details>
 <summary>Methods that will be awaited by default when the codemod is applied</summary>
@@ -100,56 +147,57 @@ import { act as ReactTestRendererAct } from "react-test-renderer";
 
 </details>
 
-You can add more methods if they're imported from somewhere by passing a JS file that only includes imports of those methods e.g. `npx codemod-missing-await-act ./src --import-config ./my-testing-library-imports.js` where `my-testing-library-imports.js` contains
+For example, when we transform this `~/src/utils.js` file
+
+```tsx
+export function hoverAndClick(element) {
+	fireEvent.mouseEnter(element);
+	fireEvent.click(element);
+}
+```
+
+`hoverAndClick` will now be async.
+The codemod generates an import config that will look something like this
 
 ```js
-import { renderWithProviders } from "@mycompany/testing-library";
+import { hoverAndClick as hoverAndClick1 } from "file:///Users/you/repo/src/utils.js";
 ```
 
-Now the codemod will also add an `await` to any `renderWithProviders` call imported from `@mycompany/testing-library`.
+You can then run the codemod again with the `--import-config` option.
 
-By default, the codemod uses the code listed in [codemod-missing-await/default-import-config.js](./default-import-config.js).
+The codemod will now also await `hoverAndClick` if `utils.js` is imported via a relative path.
 
-## Getting started
+```tsx
+import { render } from "@testing-library/react";
+import { hoverAndClick } from "./utils";
 
-```bash
-$ npx codemod-missing-await-act ./src
-Processing 4 files...
-All done.
-Results:
-0 errors
-3 unmodified
-0 skipped
-1 ok
-Time elapsed: 0.428seconds
+test("hover and click", () => {
+	const { container } = render("<button />");
+
+	hoverAndClick(container);
+});
 ```
 
-## Usage
+will be transformed into
 
-```bash
-$ npx codemod-missing-await-act
+```tsx
+import { render } from "@testing-library/react";
+import { hoverAndClick } from "./utils";
 
-codemod-missing-await-act <paths...>
+test("hover and click", async () => {
+	const { container } = await render("<button />");
 
-Positionals:
-  paths                                                      [string] [required]
+	await hoverAndClick(container);
+});
+```
 
-Options:
-  --version         Show version number                                [boolean]
-  --help            Show help                                          [boolean]
-  --dry                                               [boolean] [default: false]
-  --ignore-pattern                      [string] [default: "**/node_modules/**"]
-  --import-config   A path to a JS file importing all methods whose calls should
-                    be awaited.                                         [string]
-  --verbose                                           [boolean] [default: false]
+You need to repeat this process until the codemod no longer prompts you at the end to update the import config.
 
-Examples:
-  codemod-missing-await-act ./              Ignores `node_modules` and `build`
-  --ignore-pattern                          folders
-  "**/{node_modules,build}/**"
-  codemod-missing-await-act ./              Adds await to to all calls of
-  --import-confg                            methods imported in that file.
-  ./missing-await-import-config.js
+If you use path aliases or modules with newly async exports are imported via package specifiers, you need to manually adjust the import config e.g.
+
+```js
+import { hoverAndClick as hoverAndClick1 } from "file:///Users/you/repo/src/utils.js";
+import { hoverAndClick as hoverAndClick2 } from "@my/module";
 ```
 
 ## Limitations
@@ -165,8 +213,7 @@ await acting;
 will add `await` to the `act` call.
 
 This codemod is targetted at act calls.
-They're not allowed to be interleaved anyway so the original code was already problematic since it could also contain an `act` call.
-I don't think this is common in practice (TODO: check if we use this pattern).
+`act()` calls are not allowed to overlap anyway so the original code was already problematic since `acting` could also contain an `act` call.
 
 ### async class methods are not propagated
 

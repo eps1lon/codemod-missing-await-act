@@ -3,7 +3,7 @@ const babylon = require("@babel/parser");
 const t = require("@babel/types");
 const traverse = require("@babel/traverse").default;
 const fs = require("fs");
-const { dirname, extname, resolve } = require("path");
+const { dirname, extname, join, resolve, isAbsolute } = require("path");
 const { fileURLToPath } = require("url");
 
 /**
@@ -187,6 +187,8 @@ const codemodMissingAwaitActTransform = (file, api, options) => {
 		return;
 	}
 
+	const escapedBindingsPath = options.escapedBindingsPath;
+
 	let maybeImportConfigAst = importConfigAsts.get(options.importConfig);
 	if (maybeImportConfigAst === undefined) {
 		const importConfigSource = fs.readFileSync(options.importConfig, {
@@ -201,7 +203,7 @@ const codemodMissingAwaitActTransform = (file, api, options) => {
 
 	const ast = parseSync(file);
 	/** @type {Set<string>} */
-	const warnedExports = new Set();
+	const escapedBindings = new Set();
 
 	/**
 	 * @param {babel.NodePath<t.Expression>} path
@@ -263,12 +265,8 @@ const codemodMissingAwaitActTransform = (file, api, options) => {
 								? exportSpecifier.exported.name
 								: exportSpecifier.exported.value;
 
-						if (!warnedExports.has(exportName)) {
-							console.warn(
-								`${file.path}: Export '${exportName}' is now async. ` +
-									`Make sure to update the rules of this codemod and run it again.`
-							);
-							warnedExports.add(exportName);
+						if (!escapedBindings.has(exportName)) {
+							escapedBindings.add(exportName);
 						}
 					} else if (
 						t.isExportDefaultDeclaration(referencePath.parent) &&
@@ -276,12 +274,8 @@ const codemodMissingAwaitActTransform = (file, api, options) => {
 					) {
 						const exportName = "default";
 
-						if (!warnedExports.has(exportName)) {
-							console.warn(
-								`${file.path}: Default export is now async. ` +
-									`Make sure to update the rules of this codemod and run it again.`
-							);
-							warnedExports.add(exportName);
+						if (!escapedBindings.has(exportName)) {
+							escapedBindings.add(exportName);
 						}
 					} else if (referencePath.node.type === "ExportNamedDeclaration") {
 						const declaration = /** @type {t.Declaration} */ (
@@ -292,12 +286,8 @@ const codemodMissingAwaitActTransform = (file, api, options) => {
 							const id = declaration.declarations[0].id;
 							if (id.type === "Identifier") {
 								const exportName = id.name;
-								if (!warnedExports.has(exportName)) {
-									console.warn(
-										`${file.path}: Export '${exportName}' is now async. ` +
-											`Make sure to update the rules of this codemod and run it again.`
-									);
-									warnedExports.add(exportName);
+								if (!escapedBindings.has(exportName)) {
+									escapedBindings.add(exportName);
 								}
 							}
 						} else if (declaration.type === "FunctionDeclaration") {
@@ -305,23 +295,15 @@ const codemodMissingAwaitActTransform = (file, api, options) => {
 							// `export function() {}` would be a syntax error
 							const id = /** @type {t.Identifier} */ (declaration.id);
 							const exportName = id.name;
-							if (!warnedExports.has(exportName)) {
-								console.warn(
-									`${file.path}: Export '${exportName}' is now async. ` +
-										`Make sure to update the rules of this codemod and run it again.`
-								);
-								warnedExports.add(exportName);
+							if (!escapedBindings.has(exportName)) {
+								escapedBindings.add(exportName);
 							}
 						}
 					} else if (referencePath.type === "ExportDefaultDeclaration") {
 						const exportName = "default";
 
-						if (!warnedExports.has(exportName)) {
-							console.warn(
-								`${file.path}: Default export is now async. ` +
-									`Make sure to update the rules of this codemod and run it again.`
-							);
-							warnedExports.add(exportName);
+						if (!escapedBindings.has(exportName)) {
+							escapedBindings.add(exportName);
 						}
 					}
 				});
@@ -425,6 +407,31 @@ const codemodMissingAwaitActTransform = (file, api, options) => {
 
 	// Otherwise some files will be marked as "modified" because formatting changed
 	if (changedSome) {
+		if (escapedBindings.size > 0) {
+			// Can't write to a shared file since multiple transforms run in parallel
+			// persist the escaped bindings so that the CLI can warn about it.
+			const filePath = join(
+				escapedBindingsPath,
+				// TODO: Hash the file path to avoid collisions
+				// Base64 could create filenames that result in too long filepaths.
+				Buffer.from(file.path).toString("base64") + ".json"
+			);
+
+			fs.writeFileSync(
+				filePath,
+				JSON.stringify(
+					{
+						filePath: isAbsolute(file.path)
+							? file.path
+							: join(process.cwd(), file.path),
+						escapedBindings: Array.from(escapedBindings),
+					},
+					null,
+					2
+				)
+			);
+		}
+
 		return ast.toSource();
 	}
 	return file.source;

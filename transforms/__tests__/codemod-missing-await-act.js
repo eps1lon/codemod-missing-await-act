@@ -8,6 +8,9 @@ const codemodMissingAwaitTransform = require("../codemod-missing-await-act");
 
 async function applyTransform(source, options = {}) {
 	const transformOptions = {
+		escapedBindingsPath: await fs.mkdtemp(
+			path.join(os.tmpdir(), "codemod-missing-await-act-tests-escaped-bindings")
+		),
 		...options,
 		importConfig: path.resolve(__dirname, "../../default-import-config.js"),
 	};
@@ -595,18 +598,23 @@ test("does not add await to calls receiving newly async function as an argument"
 	`);
 });
 
-test("export newly async warns (separate export statement)", async () => {
-	jest.spyOn(console, "warn").mockImplementation(() => {});
+test("export newly async persists (separate export statement)", async () => {
+	const escapedBindingsPath = await fs.mkdtemp(
+		path.join(os.tmpdir(), "codemod-missing-await-act-tests-escaped-bindings")
+	);
 
 	await expect(
-		applyTransform(`
+		applyTransform(
+			`
 			import { act as domAct } from 'react-dom/test-utils';
 			const act = scope => {
 				domAct(scope)
 			}
 			export default act
 			export { act, act as unstable_act, act as 'literal_act' }
-		`)
+		`,
+			{ escapedBindingsPath }
+		)
 	).resolves.toMatchInlineSnapshot(`
 		"import { act as domAct } from 'react-dom/test-utils';
 		const act = async scope => {
@@ -615,19 +623,29 @@ test("export newly async warns (separate export statement)", async () => {
 		export default act
 		export { act, act as unstable_act, act as 'literal_act' }"
 	`);
-	await expect(console.warn.mock.calls).toEqual([
-		[expect.stringContaining("test.tsx: Default export is now async.")],
-		[expect.stringContaining("test.tsx: Export 'act' is now async.")],
-		[expect.stringContaining("test.tsx: Export 'unstable_act' is now async.")],
-		[expect.stringContaining("test.tsx: Export 'literal_act' is now async.")],
-	]);
+	const escapedBindingsFiles = await fs.readdir(escapedBindingsPath);
+	expect(escapedBindingsFiles).toHaveLength(1);
+	await expect(
+		fs
+			.readFile(
+				path.join(escapedBindingsPath, escapedBindingsFiles[0]),
+				"utf-8"
+			)
+			.then((json) => JSON.parse(json))
+	).resolves.toEqual({
+		escapedBindings: ["default", "act", "unstable_act", "literal_act"],
+		filePath: expect.any(String),
+	});
 });
 
 test("export newly async warns", async () => {
-	jest.spyOn(console, "warn").mockImplementation(() => {});
+	const escapedBindingsPath = await fs.mkdtemp(
+		path.join(os.tmpdir(), "codemod-missing-await-act-tests-escaped-bindings")
+	);
 
 	await expect(
-		applyTransform(`
+		applyTransform(
+			`
 			import { act as domAct } from 'react-dom/test-utils';
 			export const act = scope => {
 				domAct(scope)
@@ -638,7 +656,9 @@ test("export newly async warns", async () => {
 			export default function default_act(scope) {
 				domAct(scope)
 			}
-		`)
+		`,
+			{ escapedBindingsPath }
+		)
 	).resolves.toMatchInlineSnapshot(`
 		"import { act as domAct } from 'react-dom/test-utils';
 		export const act = async scope => {
@@ -651,11 +671,19 @@ test("export newly async warns", async () => {
 			await domAct(scope)
 		}"
 	`);
-	await expect(console.warn.mock.calls).toEqual([
-		[expect.stringContaining("test.tsx: Export 'act' is now async.")],
-		[expect.stringContaining("test.tsx: Export 'unstable_act' is now async.")],
-		[expect.stringContaining("test.tsx: Default export is now async.")],
-	]);
+	const escapedBindingsFiles = await fs.readdir(escapedBindingsPath);
+	expect(escapedBindingsFiles).toHaveLength(1);
+	await expect(
+		fs
+			.readFile(
+				path.join(escapedBindingsPath, escapedBindingsFiles[0]),
+				"utf-8"
+			)
+			.then((json) => JSON.parse(json))
+	).resolves.toEqual({
+		escapedBindings: ["act", "unstable_act", "default"],
+		filePath: expect.any(String),
+	});
 });
 
 test("export newly async reassignment does not warn", async () => {
