@@ -8,6 +8,9 @@ on:
     branches: [main]
     paths: [".github/renovate.json"]
 
+env:
+  YARN_ENABLE_HARDENED_MODE: 0
+
 jobs:
   validate:
     runs-on: ubuntu-latest
