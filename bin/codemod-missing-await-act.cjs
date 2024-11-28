@@ -41,11 +41,11 @@ async function main() {
 						// Ignoring `build`: https://www.digitalocean.com/community/tools/glob?comments=true&glob=%2A%2A%2F%7Bnode_modules%2Cbuild%7D%2F%2A%2A&matches=false&tests=package%2Fnode_modules%2Ftest.js&tests=package%2Fbuild%2Ftest.js&tests=package%2Ftest.js
 						.example(
 							'$0 ./ --ignore-pattern "**/{node_modules,build}/**"',
-							"Ignores `node_modules` and `build` folders"
+							"Ignores `node_modules` and `build` folders",
 						)
 						.example(
 							"$0 ./ --import-confg ./missing-await-import-config.js",
-							"Adds await to to all calls of methods imported in that file."
+							"Adds await to to all calls of methods imported in that file.",
 						)
 						.demandOption(["paths"])
 				);
@@ -59,12 +59,12 @@ async function main() {
 
 				// TODO: npx instead?
 				const jscodeshiftExecutable = require.resolve(
-					"jscodeshift/bin/jscodeshift.js"
+					"jscodeshift/bin/jscodeshift.js",
 				);
 
 				const tmpDirPrefix = path.join(
 					os.tmpdir(),
-					"codemod-missing-await-act"
+					"codemod-missing-await-act",
 				);
 				await fs.mkdir(tmpDirPrefix, { recursive: true });
 				const tmpDir = await fs.mkdtemp(tmpDirPrefix + path.sep);
@@ -101,7 +101,7 @@ async function main() {
 				const escapedBindingsFiles = await fs.readdir(escapedBindingsPath);
 				if (escapedBindingsFiles.length > 0) {
 					console.warn(
-						"Make sure to update import config to include the following files and their exports."
+						"Make sure to update import config to include the following files and their exports.",
 					);
 
 					const importSuffixes = new Map();
@@ -113,8 +113,8 @@ async function main() {
 								JSON.parse(
 									await fs.readFile(
 										path.join(escapedBindingsPath, escapedBindingsFile),
-										"utf8"
-									)
+										"utf8",
+									),
 								)
 							);
 						const displayFilePath = path.relative(process.cwd(), filePath);
@@ -157,7 +157,7 @@ async function main() {
 
 					const importConfigPath = path.join(
 						tmpDir,
-						"newly-async-import-config.js"
+						"newly-async-import-config.js",
 					);
 					await fs.writeFile(importConfigPath, importConfig);
 
@@ -168,10 +168,10 @@ async function main() {
 							"you should add additional entries to the import config as explained in " +
 							"https://github.com/eps1lon/codemod-missing-await-act#custom-import-config.\n" +
 							"After you adjusted above import config accordingly, run the codemod again with" +
-							`\n\`--import-config ${importConfigPath}\``
+							`\n\`--import-config ${importConfigPath}\``,
 					);
 				}
-			}
+			},
 		)
 		.version()
 		.strict(true)
