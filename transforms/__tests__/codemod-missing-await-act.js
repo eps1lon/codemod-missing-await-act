@@ -9,7 +9,10 @@ const codemodMissingAwaitTransform = require("../codemod-missing-await-act");
 async function applyTransform(source, options = {}) {
 	const transformOptions = {
 		escapedBindingsPath: await fs.mkdtemp(
-			path.join(os.tmpdir(), "codemod-missing-await-act-tests-escaped-bindings")
+			path.join(
+				os.tmpdir(),
+				"codemod-missing-await-act-tests-escaped-bindings",
+			),
 		),
 		...options,
 		importConfig: path.resolve(__dirname, "../../default-import-config.js"),
@@ -18,7 +21,7 @@ async function applyTransform(source, options = {}) {
 	if (importConfigSource !== undefined) {
 		const importConfigPath = path.join(
 			os.tmpdir(),
-			"codemod-missing-await-act/fixtures/import-config.js"
+			"codemod-missing-await-act/fixtures/import-config.js",
 		);
 		await fs.mkdir(path.dirname(importConfigPath), { recursive: true });
 		await fs.writeFile(importConfigPath, importConfigSource);
@@ -31,7 +34,7 @@ async function applyTransform(source, options = {}) {
 		{
 			path: "test.tsx",
 			source: dedent(source),
-		}
+		},
 	);
 }
 
@@ -49,7 +52,7 @@ test("act in test", async () => {
 			test("return works", () => {
 				return act()
 			})
-		`)
+		`),
 	).resolves.toMatchInlineSnapshot(`
 		"import { act } from "@testing-library/react"
 		test("void works", async () => {
@@ -68,7 +71,7 @@ test("act import alias in test", async () => {
 			const act = scope => {
 				rtlAct(scope)
 			}
-		`)
+		`),
 	).resolves.toMatchInlineSnapshot(`
 		"import { act as rtlAct } from "@testing-library/react"
 		const act = async scope => {
@@ -84,7 +87,7 @@ test("local act untouched", async () => {
 			test("void works", () => {
 				act()
 			})
-	`)
+	`),
 	).resolves.toMatchInlineSnapshot(`
 		"function act() {}
 		test("void works", () => {
@@ -109,7 +112,7 @@ test("act in utils #1", async () => {
 				
 				return test
 			}
-		`)
+		`),
 	).resolves.toMatchInlineSnapshot(`
 		"import { act } from "@testing-library/react"
 		function caseA() {
@@ -144,7 +147,7 @@ test("act in utils #2", async () => {
 				
 				return test
 			}
-		`)
+		`),
 	).resolves.toMatchInlineSnapshot(`
 		"import { act } from "@testing-library/react"
 		async function caseA() {
@@ -178,7 +181,7 @@ test("act in utils #3", async () => {
 				
 				return test
 			}
-		`)
+		`),
 	).resolves.toMatchInlineSnapshot(`
 		"import { act } from "@testing-library/react"
 		const caseA = async () => {
@@ -240,7 +243,7 @@ test("React Testing Library api", async () => {
 				unmount();
 			});
 		
-		`)
+		`),
 	).resolves.toMatchInlineSnapshot(`
 		"import {
 			cleanup,
@@ -328,7 +331,7 @@ test("React Native Testing Library api", async () => {
 				unmount();
 			});
 		
-		`)
+		`),
 	).resolves.toMatchInlineSnapshot(`
 		"import {
 			cleanup,
@@ -410,7 +413,7 @@ test("React Testing Library api as namespace", async () => {
 				unmount();
 			});
 		
-		`)
+		`),
 	).resolves.toMatchInlineSnapshot(`
 		"import * as RTL from "@testing-library/react";
 
@@ -455,7 +458,7 @@ test("react API", async () => {
 			test('test', () => {
 				React.unstable_act()
 			})
-		`)
+		`),
 	).resolves.toMatchInlineSnapshot(`
 		"import * as React from 'react'
 
@@ -473,7 +476,7 @@ test("react-test-renderer API", async () => {
 			test('test', () => {
 				act()
 			})
-		`)
+		`),
 	).resolves.toMatchInlineSnapshot(`
 		"import { act } from 'react-test-renderer'
 
@@ -493,7 +496,7 @@ test("react-dom API", async () => {
 				act()
 				flushSync()
 			})
-		`)
+		`),
 	).resolves.toMatchInlineSnapshot(`
 		"import { act } from 'react-dom/test-utils'
 		import { flushSync } from 'react-dom'
@@ -512,7 +515,7 @@ test("intentional interleaving is stopped", async () => {
 			test('test', () => {
 				Promise.all([act(), act()])
 			})
-		`)
+		`),
 	).resolves.toMatchInlineSnapshot(`
 		"import { act } from '@testing-library/react'
 		test('test', async () => {
@@ -543,7 +546,7 @@ test("only calls are codemodded", async () => {
 				// don't await this assignment
 				const myAct = act
 			})
-		`)
+		`),
 	).resolves.toMatchInlineSnapshot(`
 		"import { act } from '@testing-library/react'
 		test('test', async() => {
@@ -563,7 +566,7 @@ test.failing("reassignment is not tracked", async () => {
 			test('test', () => {
 				myAct()
 			})
-		`)
+		`),
 	).toEqual(dedent`
 		import { act } from '@testing-library/react'
 				
@@ -585,7 +588,7 @@ test("does not add await to calls receiving newly async function as an argument"
 				render()
 				test(render);
 			}
-		`)
+		`),
 	).resolves.toMatchInlineSnapshot(`
 		"import { act } from 'react-dom/test-utils';
 		async function runTests(test) {
@@ -600,7 +603,7 @@ test("does not add await to calls receiving newly async function as an argument"
 
 test("export newly async persists (separate export statement)", async () => {
 	const escapedBindingsPath = await fs.mkdtemp(
-		path.join(os.tmpdir(), "codemod-missing-await-act-tests-escaped-bindings")
+		path.join(os.tmpdir(), "codemod-missing-await-act-tests-escaped-bindings"),
 	);
 
 	await expect(
@@ -613,8 +616,8 @@ test("export newly async persists (separate export statement)", async () => {
 			export default act
 			export { act, act as unstable_act, act as 'literal_act' }
 		`,
-			{ escapedBindingsPath }
-		)
+			{ escapedBindingsPath },
+		),
 	).resolves.toMatchInlineSnapshot(`
 		"import { act as domAct } from 'react-dom/test-utils';
 		const act = async scope => {
@@ -629,9 +632,9 @@ test("export newly async persists (separate export statement)", async () => {
 		fs
 			.readFile(
 				path.join(escapedBindingsPath, escapedBindingsFiles[0]),
-				"utf-8"
+				"utf-8",
 			)
-			.then((json) => JSON.parse(json))
+			.then((json) => JSON.parse(json)),
 	).resolves.toEqual({
 		escapedBindings: ["default", "act", "unstable_act", "literal_act"],
 		filePath: expect.any(String),
@@ -640,7 +643,7 @@ test("export newly async persists (separate export statement)", async () => {
 
 test("export newly async warns", async () => {
 	const escapedBindingsPath = await fs.mkdtemp(
-		path.join(os.tmpdir(), "codemod-missing-await-act-tests-escaped-bindings")
+		path.join(os.tmpdir(), "codemod-missing-await-act-tests-escaped-bindings"),
 	);
 
 	await expect(
@@ -657,8 +660,8 @@ test("export newly async warns", async () => {
 				domAct(scope)
 			}
 		`,
-			{ escapedBindingsPath }
-		)
+			{ escapedBindingsPath },
+		),
 	).resolves.toMatchInlineSnapshot(`
 		"import { act as domAct } from 'react-dom/test-utils';
 		export const act = async scope => {
@@ -677,9 +680,9 @@ test("export newly async warns", async () => {
 		fs
 			.readFile(
 				path.join(escapedBindingsPath, escapedBindingsFiles[0]),
-				"utf-8"
+				"utf-8",
 			)
-			.then((json) => JSON.parse(json))
+			.then((json) => JSON.parse(json)),
 	).resolves.toEqual({
 		escapedBindings: ["act", "unstable_act", "default"],
 		filePath: expect.any(String),
@@ -694,7 +697,7 @@ test("export newly async reassignment does not warn", async () => {
 			import { act as domAct } from 'react-dom/test-utils';
 			// We only track CallExpressions :(
 			export const act = domAct;
-		`)
+		`),
 	).resolves.toMatchInlineSnapshot(`
 		"import { act as domAct } from 'react-dom/test-utils';
 		// We only track CallExpressions :(
@@ -712,8 +715,8 @@ test("import config with default export", async () => {
 				render(null)
 			})
 		`,
-			{ importConfigSource: "import render from '../render'" }
-		)
+			{ importConfigSource: "import render from '../render'" },
+		),
 	).resolves.toMatchInlineSnapshot(`
 		"import render from '../render';
 		test('works', async () => {

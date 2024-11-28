@@ -48,7 +48,7 @@ function isActOrCallsAct(
 	importConfigAst,
 	callee,
 	calleeModulePath,
-	importSource
+	importSource,
 ) {
 	// rerender
 	if (
@@ -103,12 +103,12 @@ function isActOrCallsAct(
 						throw new Error(
 							"Failed to parse URL from source value: " + sourceValue,
 							// @ts-expect-error -- Types don't know about `cause` yet.
-							{ cause }
+							{ cause },
 						);
 					}
 					const absoluteImportSource = resolve(
 						dirname(resolve(process.cwd(), calleeModulePath)),
-						importSource
+						importSource,
 					);
 
 					return (
@@ -140,7 +140,7 @@ function isActOrCallsAct(
 							}
 							case "ImportNamespaceSpecifier":
 								throw new Error(
-									"Namespace imports (`import * as RTL from '...'`) are not supported. Just list the namespace members directly e.g. `import { act, render } from '...'`"
+									"Namespace imports (`import * as RTL from '...'`) are not supported. Just list the namespace members directly e.g. `import { act, render } from '...'`",
 								);
 							case "ImportSpecifier": {
 								const specifierName =
@@ -159,7 +159,7 @@ function isActOrCallsAct(
 							default:
 								console.warn(
 									// @ts-expect-error This is future-proofing the code but TypeScript assumes we'll never reach this branch.
-									`Unsupported import specifier type '${specifier.type}'`
+									`Unsupported import specifier type '${specifier.type}'`,
 								);
 								break;
 						}
@@ -250,7 +250,7 @@ const codemodMissingAwaitActTransform = (file, api, options) => {
 					) {
 						ensureAwait(
 							/** @type {babel.NodePath<t.CallExpression>} */
-							(referencePath.parentPath)
+							(referencePath.parentPath),
 						);
 					} else if (
 						t.isExportSpecifier(referencePath.parent) &&
@@ -347,7 +347,7 @@ const codemodMissingAwaitActTransform = (file, api, options) => {
 							break;
 						default:
 							throw new Error(
-								`Can't resolve callee for import specifier of type '${importSpecifier.type}'`
+								`Can't resolve callee for import specifier of type '${importSpecifier.type}'`,
 							);
 					}
 					return { callee, importSource: importSource };
@@ -396,7 +396,7 @@ const codemodMissingAwaitActTransform = (file, api, options) => {
 				importConfigAst,
 				callee,
 				file.path,
-				importSource
+				importSource,
 			);
 
 			if (shouldHaveAwait) {
@@ -414,7 +414,7 @@ const codemodMissingAwaitActTransform = (file, api, options) => {
 				escapedBindingsPath,
 				// TODO: Hash the file path to avoid collisions
 				// Base64 could create filenames that result in too long filepaths.
-				Buffer.from(file.path).toString("base64") + ".json"
+				Buffer.from(file.path).toString("base64") + ".json",
 			);
 
 			fs.writeFileSync(
@@ -427,8 +427,8 @@ const codemodMissingAwaitActTransform = (file, api, options) => {
 						escapedBindings: Array.from(escapedBindings),
 					},
 					null,
-					2
-				)
+					2,
+				),
 			);
 		}
 

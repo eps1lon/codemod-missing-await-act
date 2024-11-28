@@ -7,7 +7,7 @@ describe("codemod-missing-await-act", () => {
 	const exec = promisify(childProcess.exec);
 	const typesReactCodemodBin = path.join(
 		__dirname,
-		"../codemod-missing-await-act.cjs"
+		"../codemod-missing-await-act.cjs",
 	);
 	function execCodemodMissingAwait(args) {
 		return exec(`${typesReactCodemodBin} ${args}`, {});
