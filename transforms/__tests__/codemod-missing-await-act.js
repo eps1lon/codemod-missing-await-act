@@ -1,5 +1,5 @@
 const { afterEach, expect, jest, test } = require("@jest/globals");
-const { default: dedent } = require("dedent-tabs");
+const { default: dedent } = require("dedent");
 const fs = require("fs/promises");
 const JscodeshiftTestUtils = require("jscodeshift/dist/testUtils");
 const os = require("os");
@@ -534,7 +534,7 @@ test.failing("already async act", async () => {
 		})
 	`;
 
-	await expect(applyTransform(code)).toEqual(code);
+	await expect(applyTransform(code)).resolves.toEqual(code);
 });
 
 test("only calls are codemodded", async () => {
@@ -567,7 +567,7 @@ test.failing("reassignment is not tracked", async () => {
 				myAct()
 			})
 		`),
-	).toEqual(dedent`
+	).resolves.toEqual(`
 		import { act } from '@testing-library/react'
 				
 		const myAct = act
