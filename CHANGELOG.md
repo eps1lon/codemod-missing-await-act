@@ -1,5 +1,45 @@
 # codemod-missing-await-act
 
+## 0.3.0
+
+### Minor Changes
+
+- [#48](https://github.com/eps1lon/codemod-missing-await-act/pull/48) [`5898881`](https://github.com/eps1lon/codemod-missing-await-act/commit/58988810dbc141e55be7e4edd1171824f474be38) Thanks [@eps1lon](https://github.com/eps1lon)! - Add support for propagating through relative paths
+
+  The import config (from `--import-config-path`) can now contain imports to absolute
+  paths prefixed as file URLs.
+  File URLs will be matched against relative imports.
+  Given this import config
+
+  ```js
+  import { render as render1 } from "file:///root/relative-paths/utils.js";
+  ```
+
+  the import `import { render } from './utils'` in `/root/index.test.js` will be
+  considered as newly async and each call of `render` will be awaited.
+
+- [#49](https://github.com/eps1lon/codemod-missing-await-act/pull/49) [`00f35d5`](https://github.com/eps1lon/codemod-missing-await-act/commit/00f35d5fe34ce5981440782bf05a240a7538f209) Thanks [@eps1lon](https://github.com/eps1lon)! - Summarize follow-up items when codemod finished
+
+  When newly async functions are exported, the codemod will not automatically update
+  all references.
+  However, we now summarize at the end which files are impacted and generate an import
+  config that can be used to update the remaining references if these are imported
+  via relative imports.
+  However, if these exports are imported via package specifiers or other path aliases,
+  users need to manually adjust the import sources which is explained in the README.
+
+### Patch Changes
+
+- [#26](https://github.com/eps1lon/codemod-missing-await-act/pull/26) [`c74e8af`](https://github.com/eps1lon/codemod-missing-await-act/commit/c74e8afc7ebf354b15b6d98bc0ff17258e5f0f06) Thanks [@eps1lon](https://github.com/eps1lon)! - Ensure different import configs can be used during module lifetime
+
+- [#32](https://github.com/eps1lon/codemod-missing-await-act/pull/32) [`eaefca3`](https://github.com/eps1lon/codemod-missing-await-act/commit/eaefca37b69386e3894b74254e162d17f618765f) Thanks [@eps1lon](https://github.com/eps1lon)! - Update Node.js support matrix
+
+  Codemod officially supports all currently Node.js versions listed in https://nodejs.org/en/about/previous-releases#release-schedule.
+
+- [#30](https://github.com/eps1lon/codemod-missing-await-act/pull/30) [`25492dd`](https://github.com/eps1lon/codemod-missing-await-act/commit/25492dde45bd5b78b77e0e2755109cbdece9c2a0) Thanks [@eps1lon](https://github.com/eps1lon)! - Add support for files using import assertions
+
+  E.g. `import manifest from './package.json' assert { type: 'json' }`
+
 ## 0.2.0
 
 ### Minor Changes
