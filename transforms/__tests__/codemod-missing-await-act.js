@@ -470,8 +470,8 @@ test("react API", async () => {
 			await React.unstable_act()
 		})
 
-		test('testB', () => {
-			React.act()
+		test('testB', async () => {
+			await React.act()
 		})"
 	`);
 });

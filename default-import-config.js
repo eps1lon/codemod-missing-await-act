@@ -45,6 +45,6 @@ import {
 	render as render4,
 	renderHook as renderHook4,
 } from "@testing-library/react-native/pure";
-import { unstable_act } from "react";
+import { unstable_act, act as act5 } from "react";
 import { act as ReactTestUtilsAct } from "react-dom/test-utils";
 import { act as ReactTestRendererAct } from "react-test-renderer";
