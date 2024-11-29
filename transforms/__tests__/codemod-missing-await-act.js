@@ -458,12 +458,20 @@ test("react API", async () => {
 			test('test', () => {
 				React.unstable_act()
 			})
+
+			test('testB', () => {
+				React.act()
+			})
 		`),
 	).resolves.toMatchInlineSnapshot(`
 		"import * as React from 'react'
 
 		test('test', async () => {
 			await React.unstable_act()
+		})
+
+		test('testB', () => {
+			React.act()
 		})"
 	`);
 });
