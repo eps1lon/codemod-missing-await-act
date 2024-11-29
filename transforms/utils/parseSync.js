@@ -34,6 +34,7 @@ const baseParserOptions = {
 		"optionalChaining",
 		["pipelineOperator", { proposal: "minimal" }],
 		"throwExpressions",
+		"explicitResourceManagement",
 	],
 };
 
