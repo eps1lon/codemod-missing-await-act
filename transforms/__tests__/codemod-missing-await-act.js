@@ -724,3 +724,34 @@ test("import config with default export", async () => {
 		})"
 	`);
 });
+
+test("missing scope await", async () => {
+	const escapedBindingsPath = await fs.mkdtemp(
+		path.join(os.tmpdir(), "codemod-missing-await-act-tests-escaped-bindings"),
+	);
+
+	// There's nothing to change for us here.
+	// That `scope` wasn't awaited was always a bug.
+
+	await expect(
+		applyTransform(
+			`
+			export function myAct(scope: () => void | Promise<void>): Promise<void> {
+				return React.act(async () => {
+					scope();
+				});
+			}
+		`,
+			{ escapedBindingsPath },
+		),
+	).resolves.toMatchInlineSnapshot(`
+		"export function myAct(scope: () => void | Promise<void>): Promise<void> {
+			return React.act(async () => {
+				scope();
+			});
+		}"
+	`);
+	const escapedBindingsFiles = await fs.readdir(escapedBindingsPath);
+	// Since `myAct` was already async, we don't to consider a newly async function to be exported.
+	expect(escapedBindingsFiles).toHaveLength(0);
+});
