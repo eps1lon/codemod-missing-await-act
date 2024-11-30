@@ -762,5 +762,16 @@ test("missing scope await", async () => {
 		code,
 	);
 	const escapedBindingsFiles = await fs.readdir(escapedBindingsPath);
-	expect(escapedBindingsFiles).toHaveLength(0);
+	expect(escapedBindingsFiles).toHaveLength(1);
+	await expect(
+		fs
+			.readFile(
+				path.join(escapedBindingsPath, escapedBindingsFiles[0]),
+				"utf-8",
+			)
+			.then((json) => JSON.parse(json)),
+	).resolves.toEqual({
+		escapedBindings: ["typedNewlyAsync", "untypedNewlyAsync", "alwaysAsync"],
+		filePath: expect.any(String),
+	});
 });
