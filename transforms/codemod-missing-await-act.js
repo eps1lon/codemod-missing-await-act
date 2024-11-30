@@ -405,33 +405,35 @@ const codemodMissingAwaitActTransform = (file, api, options) => {
 		},
 	});
 
+	// Even though the code might not have been changed, a newly async might still have escaped.
+	// For example, export const myAct = scope => React.act(scope)
+	if (escapedBindings.size > 0) {
+		// Can't write to a shared file since multiple transforms run in parallel
+		// persist the escaped bindings so that the CLI can warn about it.
+		const filePath = join(
+			escapedBindingsPath,
+			// TODO: Hash the file path to avoid collisions
+			// Base64 could create filenames that result in too long filepaths.
+			Buffer.from(file.path).toString("base64") + ".json",
+		);
+
+		fs.writeFileSync(
+			filePath,
+			JSON.stringify(
+				{
+					filePath: isAbsolute(file.path)
+						? file.path
+						: join(process.cwd(), file.path),
+					escapedBindings: Array.from(escapedBindings),
+				},
+				null,
+				2,
+			),
+		);
+	}
+
 	// Otherwise some files will be marked as "modified" because formatting changed
 	if (changedSome) {
-		if (escapedBindings.size > 0) {
-			// Can't write to a shared file since multiple transforms run in parallel
-			// persist the escaped bindings so that the CLI can warn about it.
-			const filePath = join(
-				escapedBindingsPath,
-				// TODO: Hash the file path to avoid collisions
-				// Base64 could create filenames that result in too long filepaths.
-				Buffer.from(file.path).toString("base64") + ".json",
-			);
-
-			fs.writeFileSync(
-				filePath,
-				JSON.stringify(
-					{
-						filePath: isAbsolute(file.path)
-							? file.path
-							: join(process.cwd(), file.path),
-						escapedBindings: Array.from(escapedBindings),
-					},
-					null,
-					2,
-				),
-			);
-		}
-
 		return ast.toSource();
 	}
 	return file.source;
