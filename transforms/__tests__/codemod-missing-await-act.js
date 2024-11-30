@@ -33,7 +33,7 @@ async function applyTransform(source, options = {}) {
 		transformOptions,
 		{
 			path: "test.tsx",
-			source: dedent(source),
+			source: /^\s/.test(source) ? dedent(source) : source,
 		},
 	);
 }
@@ -731,4 +731,36 @@ test("import config with default export", async () => {
 			await render(null)
 		})"
 	`);
+});
+
+test("missing scope await", async () => {
+	const escapedBindingsPath = await fs.mkdtemp(
+		path.join(os.tmpdir(), "codemod-missing-await-act-tests-escaped-bindings"),
+	);
+
+	const code = dedent`
+		import { act } from "@testing-library/react";
+		export function typedNewlyAsync(
+			scope: () => void | Promise<void>,
+		): Promise<void> {
+			// Not analyzeable if it always was async without type information.
+			return act(scope);
+		}
+		export function untypedNewlyAsync(scope) {
+			// Not analyzeable if it always was async.
+			return act(scope);
+		}
+		export function alwaysAsync(scope) {
+			// We know "alwaysAsync" was async all along.
+			// Could be confusing to mark this as escaped but also doesn't hurt to check.
+			return act(async () => {
+				scope();
+			});
+		}
+	`;
+	await expect(applyTransform(code, { escapedBindingsPath })).resolves.toEqual(
+		code,
+	);
+	const escapedBindingsFiles = await fs.readdir(escapedBindingsPath);
+	expect(escapedBindingsFiles).toHaveLength(0);
 });
