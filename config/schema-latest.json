@@ -1,0 +1,47 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://github.com/eps1lon/codemod-missing-await-act/tree/main/config/schema-latest.json",
+	"title": "codemod-missing-await-act import config",
+	"description": "An import config for the `codemod-missing-await-act` codemo.",
+	"type": "object",
+	"properties": {
+		"version": { "const": 1 },
+		"imports": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"properties": {
+					"sources": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "array",
+								"items": { "type": "string" }
+							}
+						]
+					},
+					"specifiers": {
+						"type": "array",
+						"items": {
+							"anyOf": [
+								{ "type": "string" },
+								{
+									"type": "object",
+									"properties": {
+										"imported": { "type": "string" },
+										"includeMemberCalls": { "type": "boolean" }
+									},
+									"required": ["imported"]
+								}
+							]
+						}
+					}
+				},
+				"required": ["sources", "specifiers"]
+			}
+		}
+	},
+	"required": ["imports"]
+}

@@ -1,0 +1,42 @@
+---
+"codemod-missing-await-act": major
+---
+
+Use JSON-based import config
+
+Instead of JS-based import config.
+Seems simpler.
+
+New default:
+
+```json
+{
+	"$schema": "https://github.com/eps1lon/codemod-missing-await-act/tree/main/config/schema-latest.json",
+	"version": 1,
+	"imports": [
+		{
+			"sources": [
+				"@testing-library/react",
+				"@testing-library/react/pure",
+				"@testing-library/react-native",
+				"@testing-library/react-native/pure"
+			],
+			"specifiers": [
+				"act",
+				"cleanup",
+				{ "imported": "fireEvent", "includeMemberCalls": true },
+				"render",
+				"renderHook"
+			]
+		},
+		{
+			"sources": "react",
+			"specifiers": ["act", "unstable_act"]
+		},
+		{
+			"sources": ["react-dom/test-utils", "react-test-renderer"],
+			"specifiers": ["act"]
+		}
+	]
+}
+```
