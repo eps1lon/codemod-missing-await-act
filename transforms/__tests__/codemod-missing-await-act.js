@@ -15,7 +15,10 @@ async function applyTransform(source, options = {}) {
 			),
 		),
 		...options,
-		importConfig: path.resolve(__dirname, "../../default-import-config.js"),
+		importConfig: path.resolve(
+			__dirname,
+			"../../config/default-import-config.json",
+		),
 	};
 	const { importConfigSource } = options;
 	if (importConfigSource !== undefined) {
@@ -715,20 +718,33 @@ test("export newly async reassignment does not warn", async () => {
 });
 
 test("import config with default export", async () => {
-	await expect(
-		applyTransform(
+	expect(
+		await applyTransform(
 			`
 			import render from '../render';
+			import alsoRender from '../render';
+			import notRender from '../renderNot';
 			test('works', () => {
 				render(null)
+				alsoRender(null)
+				notRender(null)
 			})
 		`,
-			{ importConfigSource: "import render from '../render'" },
+			{
+				importConfigSource: JSON.stringify({
+					version: 1,
+					imports: [{ sources: "../render", specifiers: ["default"] }],
+				}),
+			},
 		),
-	).resolves.toMatchInlineSnapshot(`
+	).toMatchInlineSnapshot(`
 		"import render from '../render';
+		import alsoRender from '../render';
+		import notRender from '../renderNot';
 		test('works', async () => {
 			await render(null)
+			await alsoRender(null)
+			notRender(null)
 		})"
 	`);
 });

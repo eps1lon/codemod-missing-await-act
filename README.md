@@ -91,59 +91,71 @@ However, the codemod summarizes at the end which files are impacted and will gen
 <details>
 <summary>Methods that will be awaited by default when the codemod is applied</summary>
 
-```js
-// codemod-missing-await/default-import-config.js
-// Import aliases have no effect on the codemod.
-// They're only used to not cause JS Syntax errors in this file.
-// The codemod will only consider the imported name.
-import {
-	act,
-	cleanup,
-	/**
-	 * @includeMemberCalls
-	 * e.g. fireEvent.click()
-	 */
-	fireEvent,
-	render,
-	renderHook,
-} from "@testing-library/react";
-import {
-	act as act2,
-	cleanup as cleanup2,
-	/**
-	 * @includeMemberCalls
-	 * e.g. fireEvent.click()
-	 */
-	fireEvent as fireEvent2,
-	render as render2,
-	renderHook as renderHook2,
-} from "@testing-library/react/pure";
-import {
-	act as act3,
-	cleanup as cleanup3,
-	/**
-	 * @includeMemberCalls
-	 * e.g. fireEvent.click()
-	 */
-	fireEvent as fireEvent3,
-	render as render3,
-	renderHook as renderHook3,
-} from "@testing-library/react-native";
-import {
-	act as act4,
-	cleanup as cleanup4,
-	/**
-	 * @includeMemberCalls
-	 * e.g. fireEvent.click()
-	 */
-	fireEvent as fireEvent4,
-	render as render4,
-	renderHook as renderHook4,
-} from "@testing-library/react-native/pure";
-import { unstable_act } from "react";
-import { act as ReactTestUtilsAct } from "react-dom/test-utils";
-import { act as ReactTestRendererAct } from "react-test-renderer";
+`codemod-missing-await/config/default-import-config.json`
+
+```json
+{
+	"$schema": "https://github.com/eps1lon/codemod-missing-await-act/tree/main/config/schema-latest.json",
+	"version": 1,
+	"imports": [
+		{
+			"sources": [
+				"@testing-library/react",
+				"@testing-library/react/pure",
+				"@testing-library/react-native",
+				"@testing-library/react-native/pure"
+			],
+			"specifiers": [
+				"act",
+				"cleanup",
+				{ "imported": "fireEvent", "includeMemberCalls": true },
+				"render",
+				"renderHook"
+			]
+		},
+		{
+			"sources": "react",
+			"specifiers": ["act", "unstable_act"]
+		},
+		{
+			"sources": ["react-dom/test-utils", "react-test-renderer"],
+			"specifiers": ["act"]
+		}
+	]
+}
 ```
+
+Type:
+
+```ts
+interface ImportConfig {
+	version: number;
+	imports: Array<{
+		/**
+		 * The module specifier.
+		 */
+		sources: string;
+		/**
+		 * The specifiers that should be awaited.
+		 * `Array<string>` and `Array<{ imported: string>` are equivalent
+		 */
+		specifiers: Array<
+			| string
+			| {
+					imported: string;
+					/**
+					 * If `true` all member calls of the imported specifier will be awaited.
+					 * For example, `{ imported: 'fireEvent', includeMemberCalls: true }` will await `fireEvent()` as well as `fireEvent.mouseEnter(element)`, `fireEvent.click(element)` etc..
+					 */
+					includeMemberCalls?: boolean;
+			  }
+		>;
+	}>;
+}
+```
+
+[Latest JSON schema](https://github.com/eps1lon/codemod-missing-await-act/tree/main/config/schema-latest.json)
+[all versions](https://github.com/eps1lon/codemod-missing-await-act/tree/main/config/)
 
 </details>
 
@@ -159,8 +171,16 @@ export function hoverAndClick(element) {
 `hoverAndClick` will now be async.
 The codemod generates an import config that will look something like this
 
-```js
-import { hoverAndClick as hoverAndClick1 } from "file:///Users/you/repo/src/utils.js";
+```json
+{
+	"$schema": "",
+	"imports": [
+		{
+			"sources": ["file:///Users/you/repo/src/utils.js"],
+			"specifiers": ["hoverAndClick"]
+		}
+	]
+}
 ```
 
 You can then run the codemod again with the `--import-config` option.
@@ -195,9 +215,17 @@ You need to repeat this process until the codemod no longer prompts you at the e
 
 If you use path aliases or modules with newly async exports are imported via package specifiers, you need to manually adjust the import config e.g.
 
-```js
-import { hoverAndClick as hoverAndClick1 } from "file:///Users/you/repo/src/utils.js";
-import { hoverAndClick as hoverAndClick2 } from "@my/module";
+```diff
+ {
+ 	"$schema": "",
+ 	"imports": [
+ 		{
+-			"sources": ["file:///Users/you/repo/src/utils.js"],
++			"sources": ["@my/module", "file:///Users/you/repo/src/utils.js"],
+ 			"specifiers": ["hoverAndClick"]
+ 		}
+ 	]
+ }
 ```
 
 ## Limitations
