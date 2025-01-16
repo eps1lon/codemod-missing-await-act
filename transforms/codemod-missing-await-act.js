@@ -1,10 +1,15 @@
 const parseSync = require("./utils/parseSync");
-const babylon = require("@babel/parser");
 const t = require("@babel/types");
 const traverse = require("@babel/traverse").default;
 const fs = require("fs");
 const { dirname, extname, join, resolve, isAbsolute } = require("path");
 const { fileURLToPath } = require("url");
+
+/**
+ * @typedef {object} ImportConfig
+ * @property {Array<{ sources: string | string[], specifiers: Array<string | { imported: string, includeMemberCalls?: boolean }> }>} imports
+ * @property {number} version
+ */
 
 /**
  * @param {babel.NodePath<t.Function>} path
@@ -31,25 +36,20 @@ function getBindingFromFunctionPath(path) {
 }
 
 /**
- * @type {Map<string, t.Node | undefined>}
+ * @type {Map<string, ImportConfig | undefined>}
  */
-const importConfigAsts = new Map();
+const importConfigs = new Map();
 
 /**
  * True if the call looks like a call of act() or contains a call to act().
  * For local bindings we hardcoded some names (e.g. rerender and unmount).
  * For imported bindings we match the imports of the `importConfigAst`.
- * @param {t.Node} importConfigAst
+ * @param {ImportConfig} importConfig
  * @param {t.CallExpression['callee'] | t.PrivateName} callee
  * @param {string} calleeModulePath The absolute path to the module containing {@link callee}
  * @param {string | undefined} importSource undefined if the callee has a local binding
  */
-function isActOrCallsAct(
-	importConfigAst,
-	callee,
-	calleeModulePath,
-	importSource,
-) {
+function isActOrCallsAct(importConfig, callee, calleeModulePath, importSource) {
 	// rerender
 	if (
 		importSource === undefined &&
@@ -68,107 +68,78 @@ function isActOrCallsAct(
 		return true;
 	}
 
-	let isActOrCallsAct = false;
-
 	/**
-	 * @param {t.Node} node
+	 * @param {string} source
 	 */
-	function shouldIncludeAllMembers(node) {
-		return node.leadingComments?.some((comment) => {
-			return comment.value.includes("@includeMemberCalls");
-		});
+	function configuredSourceMatches(source) {
+		// source.value = file:///Users/sebbie/utils.js
+		// importSource = ./utils.js
+		if (source === importSource) {
+			return true;
+		}
+
+		let sourceValue = source;
+		// If the importSource isn't a relative import, we don't even need to consider
+		// filepaths since we don't implement full module resolution.
+		if (importSource?.startsWith(".") && sourceValue.startsWith("file://")) {
+			try {
+				sourceValue = fileURLToPath(sourceValue);
+			} catch (cause) {
+				throw new Error(
+					"Failed to parse URL from source value: " + sourceValue,
+					// @ts-expect-error -- Types don't know about `cause` yet.
+					{ cause },
+				);
+			}
+			const absoluteImportSource = resolve(
+				dirname(resolve(process.cwd(), calleeModulePath)),
+				importSource,
+			);
+
+			return (
+				absoluteImportSource === sourceValue ||
+				// support extension-less, relative imports
+				absoluteImportSource === sourceValue.replace(extname(sourceValue), "")
+			);
+		}
+
+		return false;
 	}
 
-	traverse(importConfigAst, {
-		ImportDeclaration(path) {
-			const { source, specifiers } = path.node;
+	return importConfig.imports.some(({ sources, specifiers }) => {
+		const sourceMatches = Array.isArray(sources)
+			? sources.some(configuredSourceMatches)
+			: configuredSourceMatches(sources);
 
-			function importSourcesMatch() {
-				// source.value = file:///Users/sebbie/utils.js
-				// importSource = ./utils.js
-				if (source.value === importSource) {
-					return true;
-				}
-
-				let sourceValue = source.value;
-				// If the importSource isn't a relative import, we don't even need to consider
-				// filepaths since we don't implement full module resolution.
-				if (
-					importSource?.startsWith(".") &&
-					sourceValue.startsWith("file://")
-				) {
-					try {
-						sourceValue = fileURLToPath(sourceValue);
-					} catch (cause) {
-						throw new Error(
-							"Failed to parse URL from source value: " + sourceValue,
-							// @ts-expect-error -- Types don't know about `cause` yet.
-							{ cause },
+		if (sourceMatches) {
+			return specifiers.some((specifierConfig) => {
+				const importedSpecifier =
+					typeof specifierConfig === "string"
+						? specifierConfig
+						: specifierConfig.imported;
+				const shouldIncludeAllMembers =
+					typeof specifierConfig !== "string" &&
+					specifierConfig.includeMemberCalls;
+				switch (importedSpecifier) {
+					case "default": {
+						return true;
+					}
+					default: {
+						const specifierName = importedSpecifier;
+						return (
+							(callee.type === "Identifier" && callee.name === specifierName) ||
+							(shouldIncludeAllMembers &&
+								callee.type === "MemberExpression" &&
+								callee.object.type === "Identifier" &&
+								callee.object.name === specifierName)
 						);
 					}
-					const absoluteImportSource = resolve(
-						dirname(resolve(process.cwd(), calleeModulePath)),
-						importSource,
-					);
-
-					return (
-						absoluteImportSource === sourceValue ||
-						// support extension-less, relative imports
-						absoluteImportSource ===
-							sourceValue.replace(extname(sourceValue), "")
-					);
 				}
-
-				return false;
-			}
-
-			if (importSourcesMatch()) {
-				isActOrCallsAct =
-					isActOrCallsAct ||
-					specifiers.some((specifier) => {
-						switch (specifier.type) {
-							case "ImportDefaultSpecifier": {
-								const specifierName = specifier.local.name;
-								return (
-									(callee.type === "Identifier" &&
-										callee.name === specifierName) ||
-									(shouldIncludeAllMembers(specifier) &&
-										callee.type === "MemberExpression" &&
-										callee.object.type === "Identifier" &&
-										callee.object.name === specifierName)
-								);
-							}
-							case "ImportNamespaceSpecifier":
-								throw new Error(
-									"Namespace imports (`import * as RTL from '...'`) are not supported. Just list the namespace members directly e.g. `import { act, render } from '...'`",
-								);
-							case "ImportSpecifier": {
-								const specifierName =
-									specifier.imported.type === "Identifier"
-										? specifier.imported.name
-										: specifier.imported.value;
-								return (
-									(callee.type === "Identifier" &&
-										callee.name === specifierName) ||
-									(shouldIncludeAllMembers(specifier) &&
-										callee.type === "MemberExpression" &&
-										callee.object.type === "Identifier" &&
-										callee.object.name === specifierName)
-								);
-							}
-							default:
-								console.warn(
-									// @ts-expect-error This is future-proofing the code but TypeScript assumes we'll never reach this branch.
-									`Unsupported import specifier type '${specifier.type}'`,
-								);
-								break;
-						}
-					});
-			}
-		},
+			});
+		} else {
+			return false;
+		}
 	});
-
-	return isActOrCallsAct;
 }
 
 /**
@@ -189,17 +160,15 @@ const codemodMissingAwaitActTransform = (file, api, options) => {
 
 	const escapedBindingsPath = options.escapedBindingsPath;
 
-	let maybeImportConfigAst = importConfigAsts.get(options.importConfig);
-	if (maybeImportConfigAst === undefined) {
-		const importConfigSource = fs.readFileSync(options.importConfig, {
+	let maybeImportConfig = importConfigs.get(options.importConfig);
+	if (maybeImportConfig === undefined) {
+		const importConfigJson = fs.readFileSync(options.importConfig, {
 			encoding: "utf-8",
 		});
-		maybeImportConfigAst = babylon.parse(importConfigSource, {
-			sourceType: "module",
-		}).program;
-		importConfigAsts.set(options.importConfig, maybeImportConfigAst);
+		maybeImportConfig = JSON.parse(importConfigJson);
+		importConfigs.set(options.importConfig, maybeImportConfig);
 	}
-	const importConfigAst = /** @type {t.Node} */ (maybeImportConfigAst);
+	const importConfig = /** @type {ImportConfig} */ (maybeImportConfig);
 
 	const ast = parseSync(file);
 	/** @type {Set<string>} */
@@ -393,7 +362,7 @@ const codemodMissingAwaitActTransform = (file, api, options) => {
 		CallExpression(path) {
 			const { callee, importSource } = getCalleeAndModuleName(path);
 			const shouldHaveAwait = isActOrCallsAct(
-				importConfigAst,
+				importConfig,
 				callee,
 				file.path,
 				importSource,

@@ -4,9 +4,12 @@ const childProcess = require("child_process");
 const process = require("process");
 const yargs = require("yargs/yargs");
 const { hideBin } = require("yargs/helpers");
+const { readFileSync } = require("fs");
 const fs = require("fs/promises");
 const os = require("os");
 const path = require("path");
+
+const currentImportConfigSchemaVersion = "v1";
 
 async function main() {
 	const transformsRoot = path.join(__dirname, "../transforms");
@@ -55,7 +58,7 @@ async function main() {
 				const importConfig =
 					typeof importConfigArg === "string"
 						? path.resolve(importConfigArg)
-						: path.resolve(__dirname, "../default-import-config.js");
+						: path.resolve(__dirname, "../config/default-import-config.json");
 
 				// TODO: npx instead?
 				const jscodeshiftExecutable = require.resolve(
@@ -104,62 +107,33 @@ async function main() {
 						"Make sure to update import config to include the following files and their exports.",
 					);
 
-					const importSuffixes = new Map();
-					let importConfig = "";
-
-					for (const escapedBindingsFile of escapedBindingsFiles) {
-						const { filePath, escapedBindings } =
-							/** @type {{filePath: String, escapedBindings: string[]}} */ (
-								JSON.parse(
-									await fs.readFile(
-										path.join(escapedBindingsPath, escapedBindingsFile),
-										"utf8",
-									),
-								)
-							);
-						const displayFilePath = path.relative(process.cwd(), filePath);
-						const escapedBindingsList = escapedBindings
-							.map((binding) => {
-								return `  - ${binding}`;
-							})
-							.join("\n");
-
-						console.warn(`${displayFilePath}: \n${escapedBindingsList}`);
-
-						/** @type {string | null} */
-						let importDefaultSpecifier = null;
-						/** @type {string[]} */
-						const importSpecifiers = [];
-						for (const importedName of escapedBindings) {
-							const importSuffix = importSuffixes.get(importedName) ?? 1;
-							const localName = `${importedName}${importSuffix}`;
-
-							importSuffixes.set(importedName, importSuffix + 1);
-
-							if (importedName === "default") {
-								importDefaultSpecifier = localName;
-							} else {
-								importSpecifiers.push(`${importedName} as ${localName}`);
-							}
-						}
-
-						importConfig += `import `;
-						if (importDefaultSpecifier !== null) {
-							importConfig += `${importDefaultSpecifier}`;
-							if (importSpecifiers.length > 0) {
-								importConfig += `, { \n  ${importSpecifiers.join(",\n  ")}\n}`;
-							}
-						} else {
-							importConfig += `{ \n  ${importSpecifiers.join(",\n  ")}\n}`;
-						}
-						importConfig += ` from "file://${filePath}";\n`;
-					}
-
 					const importConfigPath = path.join(
 						tmpDir,
-						"newly-async-import-config.js",
+						"newly-async-import-config.json",
 					);
-					await fs.writeFile(importConfigPath, importConfig);
+					const importConfig = {
+						$schema: `https://github.com/eps1lon/codemod-missing-await-act/tree/main/config/schema-${currentImportConfigSchemaVersion}.json`,
+						imports: escapedBindingsFiles.map((escapedBindingsFile) => {
+							const { filePath, escapedBindings } =
+								/** @type {{filePath: String, escapedBindings: string[]}} */ (
+									JSON.parse(
+										readFileSync(
+											path.join(escapedBindingsPath, escapedBindingsFile),
+											"utf8",
+										),
+									)
+								);
+
+							return {
+								source: [`file://${filePath}`],
+								specifiers: escapedBindings,
+							};
+						}),
+					};
+					await fs.writeFile(
+						importConfigPath,
+						JSON.stringify(importConfig, null, 2),
+					);
 
 					console.warn(
 						// Space between importConfigPath and "." so that the terminal does interpret the "." as part of the filepath.
