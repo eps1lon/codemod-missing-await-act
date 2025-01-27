@@ -2,8 +2,11 @@ name: Validate Renovate config
 
 on:
   push:
-    # run everytime on main to catch conflicting merges
-    branches: [main]
+    branches:
+      # run everytime on main to catch conflicting merges
+      - main
+      # hardcoded test branch to test this workflow
+      - test/ci-validate-renovate
   pull_request:
     branches: [main]
     paths: [".github/renovate.json"]
@@ -19,4 +22,5 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
-      - run: yarn test:renovate
+      # keep in sync with `yarn test:renovate`
+      - run: yarn dlx --package renovate@31.21.2 renovate-config-validator

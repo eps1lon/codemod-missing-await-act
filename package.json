@@ -12,7 +12,7 @@
 		"release": "yarn changeset publish",
 		"test:lint": "eslint bin/**/*.{cjs,js,mjs} transforms/**/*.{cjs,js,mjs}",
 		"test:manual-fixture": "./scripts/test-manual-fixture.sh",
-		"test:renovate": "npx --package renovate@31.21.2 -c renovate-config-validator",
+		"test:renovate": "yarn dlx --package renovate@31.21.2 renovate-config-validator",
 		"test:types": "tsc -p tsconfig.json --noEmit",
 		"test:unit": "jest"
 	},
