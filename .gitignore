@@ -127,3 +127,5 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+# MacOS only patch that, if committed, would break `yarn immutable`
+.yarn/cache/fsevents-patch-*
