@@ -791,3 +791,186 @@ test("missing scope await", async () => {
 		filePath: expect.any(String),
 	});
 });
+
+// FIXME: `take` is almost certainly now `async`
+test("async callback as argument turns callee async", async () => {
+	await expect(
+		applyTransform(`
+			import { act } from "@testing-library/react"
+			test('test', () => {
+				take(() => {
+					act()
+				})
+			})
+		`),
+	).resolves.toMatchInlineSnapshot(`
+		"import { act } from "@testing-library/react"
+		test('test', () => {
+			take(async () => {
+				await act()
+			})
+		})"
+	`);
+});
+
+// FIXME: Should turn expect().* into expect().resolves.*
+test("expect().toThrow() to async matchers", async () => {
+	await expect(
+		applyTransform(`
+			import { act } from "@testing-library/react"
+			test('sync', () => {
+				expect(() => {
+					act()
+					return 1
+				}).toEqual(1)
+			})
+			test('async', async () => {
+				await expect(async () => {
+					await null
+					act()
+					return true
+				}).resolves.toEqual(true)
+			})
+		`),
+	).resolves.toMatchInlineSnapshot(`
+		"import { act } from "@testing-library/react"
+		test('sync', () => {
+			expect(async () => {
+				await act()
+				return 1
+			}).toEqual(1)
+		})
+		test('async', async () => {
+			await expect(async () => {
+				await null
+				await act()
+				return true
+			}).resolves.toEqual(true)
+		})"
+	`);
+});
+
+// FIXME: Should turn expect().toThrow() into expect().rejects.toThrow()
+test("expect().toThrow() to async matchers", async () => {
+	await expect(
+		applyTransform(`
+			import { act } from "@testing-library/react"
+			test('sync', () => {
+				expect(() => {
+					act()	
+				}).toThrow()
+			})
+			test('async', async () => {
+				await expect(async () => {
+					await null
+					act()
+					return true
+				}).rejects.toThrow()
+			})
+		`),
+	).resolves.toMatchInlineSnapshot(`
+		"import { act } from "@testing-library/react"
+		test('sync', () => {
+			expect(async () => {
+				await act()	
+			}).toThrow()
+		})
+		test('async', async () => {
+			await expect(async () => {
+				await null
+				await act()
+				return true
+			}).rejects.toThrow()
+		})"
+	`);
+});
+
+// FIXME: Should turn expect().not.toThrow() into expect().not.rejects.toThrow()
+test("expect().not.toThrow() to async matchers", async () => {
+	await expect(
+		applyTransform(`
+			import { act } from "@testing-library/react"
+			test('sync', () => {
+				expect(() => {
+					act()	
+				}).not.toThrow()
+			})
+			test('async', async () => {
+				await expect(async () => {
+					act()	
+				}).not.rejects.toThrow()
+			})
+		`),
+	).resolves.toMatchInlineSnapshot(`
+		"import { act } from "@testing-library/react"
+		test('sync', () => {
+			expect(async () => {
+				await act()	
+			}).not.toThrow()
+		})
+		test('async', async () => {
+			await expect(async () => {
+				await act()	
+			}).not.rejects.toThrow()
+		})"
+	`);
+});
+
+// FIXME: Should wrapp returntype in Promise
+test("adds Promise type", async () => {
+	await expect(
+		applyTransform(`
+			import { act } from "@testing-library/react"
+			function render(): void {
+				act()
+			}
+		`),
+	).resolves.toMatchInlineSnapshot(`
+		"import { act } from "@testing-library/react"
+		async function render(): void {
+			await act()
+		}"
+	`);
+});
+
+// FIXME: Should not turn Effect async
+test("rerender in effect", async () => {
+	await expect(
+		applyTransform(`
+			function Component() {
+				const [, rerender] = useReducer(() => 1, 0)
+				useEffect(() => {
+					rerender()	
+				}, [])
+			}
+		`),
+	).resolves.toMatchInlineSnapshot(`
+		"function Component() {
+			const [, rerender] = useReducer(() => 1, 0)
+			useEffect(async () => {
+				await rerender()	
+			}, [])
+		}"
+	`);
+});
+
+// FIXME: Should be newly async
+test("bound rerender", async () => {
+	await expect(
+		applyTransform(`
+			import {render} from '@testing-library/react'
+
+			test("bound render", () => {
+				const view = render()
+				view.rerender()
+			})
+		`),
+	).resolves.toMatchInlineSnapshot(`
+		"import {render} from '@testing-library/react'
+
+		test("bound render", async () => {
+			const view = await render()
+			view.rerender()
+		})"
+	`);
+});
