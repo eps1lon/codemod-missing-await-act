@@ -137,11 +137,12 @@ async function main() {
 
 					console.warn(
 						// Space between importConfigPath and "." so that the terminal does interpret the "." as part of the filepath.
-						`An import config considering the above files was generated in ${importConfigPath} . ` +
+						`Some codemodded files export newly async functions.` +
+							`A new import config considering these files was generated in ${importConfigPath}.\n` +
 							"If these files are not necessarily imported as relative paths, " +
 							"you should add additional entries to the import config as explained in " +
 							"https://github.com/eps1lon/codemod-missing-await-act#custom-import-config.\n" +
-							"After you adjusted above import config accordingly, run the codemod again with" +
+							"After you adjusted above import config accordingly, run the same command again with" +
 							`\n\`--import-config ${importConfigPath}\``,
 					);
 				}
