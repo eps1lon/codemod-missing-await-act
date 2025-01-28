@@ -125,7 +125,7 @@ async function main() {
 								);
 
 							return {
-								source: [`file://${filePath}`],
+								sources: [`file://${filePath}`],
 								specifiers: escapedBindings,
 							};
 						}),
