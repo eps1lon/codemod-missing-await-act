@@ -114,8 +114,8 @@ async function main() {
 					const importConfig = {
 						$schema: `https://github.com/eps1lon/codemod-missing-await-act/tree/main/config/schema-${currentImportConfigSchemaVersion}.json`,
 						imports: escapedBindingsFiles.map((escapedBindingsFile) => {
-							const { filePath, escapedBindings } =
-								/** @type {{filePath: String, escapedBindings: string[]}} */ (
+							const { filePath, escapedBindings, escapedFactoryBindings } =
+								/** @type {{filePath: String, escapedBindings: string[], escapedFactoryBindings: string[]}} */ (
 									JSON.parse(
 										readFileSync(
 											path.join(escapedBindingsPath, escapedBindingsFile),
@@ -126,7 +126,12 @@ async function main() {
 
 							return {
 								sources: [`file://${filePath}`],
-								specifiers: escapedBindings,
+								specifiers: [
+									...escapedBindings,
+									escapedFactoryBindings.map((binding) => {
+										return { imported: binding, asyncFunctionFactory: true };
+									}),
+								],
 							};
 						}),
 					};

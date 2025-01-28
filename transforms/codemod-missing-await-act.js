@@ -7,7 +7,7 @@ const { fileURLToPath } = require("url");
 
 /**
  * @typedef {object} ImportConfig
- * @property {Array<{ sources: string | string[], specifiers: Array<string | { imported: string, includeMemberCalls?: boolean }> }>} imports
+ * @property {Array<{ sources: string | string[], specifiers: Array<string | { imported: string, includeMemberCalls?: boolean, asyncFunctionFactory?: boolean }> }>} imports
  * @property {number} version
  */
 
@@ -41,9 +41,49 @@ function getBindingFromFunctionPath(path) {
 const importConfigs = new Map();
 
 /**
+ * @param {string | undefined} importSource undefined if the callee has a local binding
+ * @param {string} calleeModulePath The absolute path to the module containing
+ * @param {string} source
+ */
+function importSourceMatches(importSource, calleeModulePath, source) {
+	// source.value = file:///Users/sebbie/utils.js
+	// importSource = ./utils.js
+	if (source === importSource) {
+		return true;
+	}
+
+	let sourceValue = source;
+	// If the importSource isn't a relative import, we don't even need to consider
+	// filepaths since we don't implement full module resolution.
+	if (importSource?.startsWith(".") && sourceValue.startsWith("file://")) {
+		try {
+			sourceValue = fileURLToPath(sourceValue);
+		} catch (cause) {
+			throw new Error(
+				"Failed to parse URL from source value: " + sourceValue,
+				// @ts-expect-error -- Types don't know about `cause` yet.
+				{ cause },
+			);
+		}
+		const absoluteImportSource = resolve(
+			dirname(resolve(process.cwd(), calleeModulePath)),
+			importSource,
+		);
+
+		return (
+			absoluteImportSource === sourceValue ||
+			// support extension-less, relative imports
+			absoluteImportSource === sourceValue.replace(extname(sourceValue), "")
+		);
+	}
+
+	return false;
+}
+
+/**
  * True if the call looks like a call of act() or contains a call to act().
  * For local bindings we hardcoded some names (e.g. rerender and unmount).
- * For imported bindings we match the imports of the `importConfigAst`.
+ * For imported bindings we match the imports of the `importConfig`.
  * @param {ImportConfig} importConfig
  * @param {t.CallExpression['callee'] | t.PrivateName} callee
  * @param {string} calleeModulePath The absolute path to the module containing {@link callee}
@@ -68,43 +108,11 @@ function isActOrCallsAct(importConfig, callee, calleeModulePath, importSource) {
 		return true;
 	}
 
-	/**
-	 * @param {string} source
-	 */
-	function configuredSourceMatches(source) {
-		// source.value = file:///Users/sebbie/utils.js
-		// importSource = ./utils.js
-		if (source === importSource) {
-			return true;
-		}
-
-		let sourceValue = source;
-		// If the importSource isn't a relative import, we don't even need to consider
-		// filepaths since we don't implement full module resolution.
-		if (importSource?.startsWith(".") && sourceValue.startsWith("file://")) {
-			try {
-				sourceValue = fileURLToPath(sourceValue);
-			} catch (cause) {
-				throw new Error(
-					"Failed to parse URL from source value: " + sourceValue,
-					// @ts-expect-error -- Types don't know about `cause` yet.
-					{ cause },
-				);
-			}
-			const absoluteImportSource = resolve(
-				dirname(resolve(process.cwd(), calleeModulePath)),
-				importSource,
-			);
-
-			return (
-				absoluteImportSource === sourceValue ||
-				// support extension-less, relative imports
-				absoluteImportSource === sourceValue.replace(extname(sourceValue), "")
-			);
-		}
-
-		return false;
-	}
+	const configuredSourceMatches = importSourceMatches.bind(
+		null,
+		importSource,
+		calleeModulePath,
+	);
 
 	return importConfig.imports.some(({ sources, specifiers }) => {
 		const sourceMatches = Array.isArray(sources)
@@ -113,6 +121,13 @@ function isActOrCallsAct(importConfig, callee, calleeModulePath, importSource) {
 
 		if (sourceMatches) {
 			return specifiers.some((specifierConfig) => {
+				const asyncFunctionFactory =
+					typeof specifierConfig !== "string" &&
+					specifierConfig.asyncFunctionFactory;
+				if (asyncFunctionFactory) {
+					return false;
+				}
+
 				const importedSpecifier =
 					typeof specifierConfig === "string"
 						? specifierConfig
@@ -132,6 +147,62 @@ function isActOrCallsAct(importConfig, callee, calleeModulePath, importSource) {
 								callee.type === "MemberExpression" &&
 								callee.object.type === "Identifier" &&
 								callee.object.name === specifierName)
+						);
+					}
+				}
+			});
+		} else {
+			return false;
+		}
+	});
+}
+
+/**
+ * True if the call looks like a call of a factory returning a newly async function.
+ * For imported bindings we match the imports of the `importConfig`.
+ * @param {ImportConfig} importConfig
+ * @param {t.CallExpression['callee'] | t.PrivateName} callee
+ * @param {string} calleeModulePath The absolute path to the module containing {@link callee}
+ * @param {string | undefined} importSource undefined if the callee has a local binding
+ */
+function isFactoryReturningNewlyAsyncCall(
+	importConfig,
+	callee,
+	calleeModulePath,
+	importSource,
+) {
+	const configuredSourceMatches = importSourceMatches.bind(
+		null,
+		importSource,
+		calleeModulePath,
+	);
+
+	return importConfig.imports.some(({ sources, specifiers }) => {
+		const sourceMatches = Array.isArray(sources)
+			? sources.some(configuredSourceMatches)
+			: configuredSourceMatches(sources);
+
+		if (sourceMatches) {
+			return specifiers.some((specifierConfig) => {
+				const asyncFunctionFactory =
+					typeof specifierConfig !== "string" &&
+					specifierConfig.asyncFunctionFactory;
+				if (!asyncFunctionFactory) {
+					return false;
+				}
+
+				const importedSpecifier =
+					typeof specifierConfig === "string"
+						? specifierConfig
+						: specifierConfig.imported;
+				switch (importedSpecifier) {
+					case "default": {
+						return true;
+					}
+					default: {
+						const specifierName = importedSpecifier;
+						return (
+							callee.type === "Identifier" && callee.name === specifierName
 						);
 					}
 				}
@@ -171,8 +242,165 @@ const codemodMissingAwaitActTransform = (file, api, options) => {
 	const importConfig = /** @type {ImportConfig} */ (maybeImportConfig);
 
 	const ast = parseSync(file);
-	/** @type {Set<string>} */
-	const escapedBindings = new Set();
+	/**
+	 * second value specifies is named after the return type of the function
+	 * 'async' implies binding is of type `Ï() => Promise<unknown>`
+	 * 'async-function'  implies binding is of type  `() => () => Promise<unknown>`
+	 *  @type {Map<string, 'async' | 'async-function'>}
+	 */
+	const escapedBindings = new Map();
+
+	/**
+	 * @param {babel.NodePath} path
+	 */
+	function propagateAsyncReturn(path) {
+		if (path.parentPath?.isCallExpression() && path.key === "callee") {
+			ensureAwait(path.parentPath);
+		} else if (path.parentPath?.isExportSpecifier() && path.key === "local") {
+			const exportSpecifier = path.parentPath.node;
+			const exportName =
+				// exported is Identifier | StringLiteral
+				exportSpecifier.exported.type === "Identifier"
+					? exportSpecifier.exported.name
+					: exportSpecifier.exported.value;
+
+			if (!escapedBindings.has(exportName)) {
+				escapedBindings.set(exportName, "async");
+			}
+		} else if (
+			path.parentPath?.isExportDefaultDeclaration() &&
+			path.key === "declaration"
+		) {
+			const exportName = "default";
+
+			if (!escapedBindings.has(exportName)) {
+				escapedBindings.set(exportName, "async");
+			}
+		} else if (path.isExportNamedDeclaration()) {
+			const declaration = path.node.declaration;
+			// export const
+			if (declaration != null && declaration.type === "VariableDeclaration") {
+				const id = declaration.declarations[0].id;
+				if (id.type === "Identifier") {
+					const exportName = id.name;
+					if (!escapedBindings.has(exportName)) {
+						escapedBindings.set(exportName, "async");
+					}
+				}
+			} else if (
+				declaration != null &&
+				declaration.type === "FunctionDeclaration"
+			) {
+				// `export function` needs to have an identifier
+				// `export function() {}` would be a syntax error
+				const id = /** @type {t.Identifier} */ (declaration.id);
+				const exportName = id.name;
+				if (!escapedBindings.has(exportName)) {
+					escapedBindings.set(exportName, "async");
+				}
+			}
+		} else if (path.isExportDefaultDeclaration()) {
+			const exportName = "default";
+
+			if (!escapedBindings.has(exportName)) {
+				escapedBindings.set(exportName, "async");
+			}
+		}
+	}
+
+	/**
+	 * @param {babel.NodePath<t.ReturnStatement>} path
+	 */
+	function markFactoryReturnAsNewlyAsync(path) {
+		let maybeFunctionScope = path.scope;
+		while (maybeFunctionScope && !maybeFunctionScope.path.isFunction()) {
+			maybeFunctionScope = maybeFunctionScope.parent;
+		}
+
+		if (maybeFunctionScope) {
+			const functionPath = /** @type {babel.NodePath<t.Function>} */ (
+				maybeFunctionScope.path
+			);
+
+			// References to
+			const binding = getBindingFromFunctionPath(functionPath);
+			if (binding) {
+				binding.referencePaths.forEach((referencePath) => {
+					if (
+						referencePath.parentPath?.isCallExpression() &&
+						referencePath.key === "callee"
+					) {
+						const factoryCallExpression = referencePath.parentPath;
+						if (factoryCallExpression.parentPath.isVariableDeclarator()) {
+							const bindingName =
+								factoryCallExpression.parentPath.node.id.type === "Identifier"
+									? factoryCallExpression.parentPath.node.id.name
+									: undefined;
+							const factoryReturnBinding =
+								bindingName === undefined
+									? undefined
+									: factoryCallExpression.parentPath.scope.getBinding(
+											bindingName,
+										);
+
+							factoryReturnBinding?.referencePaths.forEach((referencePath) => {
+								propagateAsyncReturn(referencePath);
+							});
+						}
+					} else if (
+						referencePath.parentPath?.isExportSpecifier() &&
+						referencePath.key === "local"
+					) {
+						const exportSpecifier = referencePath.parentPath.node;
+						const exportName =
+							// exported is Identifier | StringLiteral
+							exportSpecifier.exported.type === "Identifier"
+								? exportSpecifier.exported.name
+								: exportSpecifier.exported.value;
+
+						if (!escapedBindings.has(exportName)) {
+							escapedBindings.set(exportName, "async-function");
+						}
+					} else if (
+						referencePath.parentPath?.isExportDefaultDeclaration() &&
+						referencePath.key === "declaration"
+					) {
+						const exportName = "default";
+
+						if (!escapedBindings.has(exportName)) {
+							escapedBindings.set(exportName, "async-function");
+						}
+					} else if (referencePath.isExportNamedDeclaration()) {
+						const declaration = referencePath.node.declaration;
+						// export const
+						if (
+							declaration != null &&
+							declaration.type === "VariableDeclaration"
+						) {
+							const id = declaration.declarations[0].id;
+							if (id.type === "Identifier") {
+								const exportName = id.name;
+								if (!escapedBindings.has(exportName)) {
+									escapedBindings.set(exportName, "async-function");
+								}
+							}
+						} else if (
+							declaration != null &&
+							declaration.type === "FunctionDeclaration"
+						) {
+							// `export function` needs to have an identifier
+							// `export function() {}` would be a syntax error
+							const id = /** @type {t.Identifier} */ (declaration.id);
+							const exportName = id.name;
+							if (!escapedBindings.has(exportName)) {
+								escapedBindings.set(exportName, "async-function");
+							}
+						}
+					}
+				});
+			}
+		}
+	}
 
 	/**
 	 * @param {babel.NodePath<t.Expression>} path
@@ -213,69 +441,14 @@ const codemodMissingAwaitActTransform = (file, api, options) => {
 			if (binding) {
 				binding.referencePaths.forEach((referencePath) => {
 					// propage await to `binding()` but not `other(binding)`
-					if (
-						t.isCallExpression(referencePath.parent) &&
-						referencePath.key === "callee"
-					) {
-						ensureAwait(
-							/** @type {babel.NodePath<t.CallExpression>} */
-							(referencePath.parentPath),
-						);
-					} else if (
-						t.isExportSpecifier(referencePath.parent) &&
-						referencePath.key === "local"
-					) {
-						const exportSpecifier = /** @type {t.ExportSpecifier} */ (
-							referencePath.parent
-						);
-						const exportName =
-							// exported is Identifier | StringLiteral
-							exportSpecifier.exported.type === "Identifier"
-								? exportSpecifier.exported.name
-								: exportSpecifier.exported.value;
-
-						if (!escapedBindings.has(exportName)) {
-							escapedBindings.add(exportName);
-						}
-					} else if (
-						t.isExportDefaultDeclaration(referencePath.parent) &&
-						referencePath.key === "declaration"
-					) {
-						const exportName = "default";
-
-						if (!escapedBindings.has(exportName)) {
-							escapedBindings.add(exportName);
-						}
-					} else if (referencePath.node.type === "ExportNamedDeclaration") {
-						const declaration = /** @type {t.Declaration} */ (
-							referencePath.node.declaration
-						);
-						// export const
-						if (declaration.type === "VariableDeclaration") {
-							const id = declaration.declarations[0].id;
-							if (id.type === "Identifier") {
-								const exportName = id.name;
-								if (!escapedBindings.has(exportName)) {
-									escapedBindings.add(exportName);
-								}
-							}
-						} else if (declaration.type === "FunctionDeclaration") {
-							// `export function` needs to have an identifier
-							// `export function() {}` would be a syntax error
-							const id = /** @type {t.Identifier} */ (declaration.id);
-							const exportName = id.name;
-							if (!escapedBindings.has(exportName)) {
-								escapedBindings.add(exportName);
-							}
-						}
-					} else if (referencePath.type === "ExportDefaultDeclaration") {
-						const exportName = "default";
-
-						if (!escapedBindings.has(exportName)) {
-							escapedBindings.add(exportName);
-						}
-					}
+					propagateAsyncReturn(referencePath);
 				});
+			} else if (functionPath.parentPath?.isReturnStatement()) {
+				// The newly async function is just returned.
+				// This function is actually a factory function i.e.
+				// old: () => () => unknown
+				// new: () => () => Promise<unknown>
+				markFactoryReturnAsNewlyAsync(functionPath.parentPath);
 			}
 		}
 	}
@@ -370,6 +543,31 @@ const codemodMissingAwaitActTransform = (file, api, options) => {
 
 			if (shouldHaveAwait) {
 				ensureAwait(path);
+			} else {
+				const returnIsNewlyAsync = isFactoryReturningNewlyAsyncCall(
+					importConfig,
+					callee,
+					file.path,
+					importSource,
+				);
+				const factoryCallExpression = path;
+				if (
+					returnIsNewlyAsync &&
+					factoryCallExpression.parentPath.isVariableDeclarator()
+				) {
+					const bindingName =
+						factoryCallExpression.parentPath.node.id.type === "Identifier"
+							? factoryCallExpression.parentPath.node.id.name
+							: undefined;
+					const factoryReturnBinding =
+						bindingName === undefined
+							? undefined
+							: factoryCallExpression.parentPath.scope.getBinding(bindingName);
+
+					factoryReturnBinding?.referencePaths.forEach((referencePath) => {
+						propagateAsyncReturn(referencePath);
+					});
+				}
 			}
 		},
 	});
@@ -386,6 +584,18 @@ const codemodMissingAwaitActTransform = (file, api, options) => {
 			Buffer.from(file.path).toString("base64") + ".json",
 		);
 
+		/** @type {Array<string>} */
+		const escapedReturnAsyncBindings = [];
+		/** @type {Array<string>} */
+		const escapedReturnAsyncFunctionBindings = [];
+		for (const [bindingName, returnType] of escapedBindings) {
+			if (returnType === "async") {
+				escapedReturnAsyncBindings.push(bindingName);
+			} else if (returnType === "async-function") {
+				escapedReturnAsyncFunctionBindings.push(bindingName);
+			}
+		}
+
 		fs.writeFileSync(
 			filePath,
 			JSON.stringify(
@@ -393,7 +603,8 @@ const codemodMissingAwaitActTransform = (file, api, options) => {
 					filePath: isAbsolute(file.path)
 						? file.path
 						: join(process.cwd(), file.path),
-					escapedBindings: Array.from(escapedBindings),
+					escapedBindings: escapedReturnAsyncBindings,
+					escapedFactoryBindings: escapedReturnAsyncFunctionBindings,
 				},
 				null,
 				2,
