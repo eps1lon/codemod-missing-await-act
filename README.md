@@ -148,6 +148,13 @@ interface ImportConfig {
 					 * For example, `{ imported: 'fireEvent', includeMemberCalls: true }` will await `fireEvent()` as well as `fireEvent.mouseEnter(element)`, `fireEvent.click(element)` etc..
 					 */
 					includeMemberCalls?: boolean;
+					/**
+					 * If true, the imported specifier is assumed to be a factor for a newly
+					 * async function.
+					 * For example, in `export const makeRender = () => () => render(...)`
+					 * we'd specify `{ imported: 'makeRender', asyncFunctionFactory: true }`Ï
+					 */
+					asyncFunctionFactory?: boolean;
 			  }
 		>;
 	}>;

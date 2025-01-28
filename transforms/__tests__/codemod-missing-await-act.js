@@ -14,11 +14,11 @@ async function applyTransform(source, options = {}) {
 				"codemod-missing-await-act-tests-escaped-bindings",
 			),
 		),
-		...options,
 		importConfig: path.resolve(
 			__dirname,
 			"../../config/default-import-config.json",
 		),
+		...options,
 	};
 	const { importConfigSource } = options;
 	if (importConfigSource !== undefined) {
@@ -648,6 +648,7 @@ test("export newly async persists (separate export statement)", async () => {
 			.then((json) => JSON.parse(json)),
 	).resolves.toEqual({
 		escapedBindings: ["default", "act", "unstable_act", "literal_act"],
+		escapedFactoryBindings: [],
 		filePath: expect.any(String),
 	});
 });
@@ -696,6 +697,7 @@ test("export newly async warns", async () => {
 			.then((json) => JSON.parse(json)),
 	).resolves.toEqual({
 		escapedBindings: ["act", "unstable_act", "default"],
+		escapedFactoryBindings: [],
 		filePath: expect.any(String),
 	});
 });
@@ -788,6 +790,7 @@ test("missing scope await", async () => {
 			.then((json) => JSON.parse(json)),
 	).resolves.toEqual({
 		escapedBindings: ["typedNewlyAsync", "untypedNewlyAsync", "alwaysAsync"],
+		escapedFactoryBindings: [],
 		filePath: expect.any(String),
 	});
 });
@@ -973,4 +976,131 @@ test("bound rerender", async () => {
 			view.rerender()
 		})"
 	`);
+});
+
+test("return newly async function", async () => {
+	const escapedBindingsPath = await fs.mkdtemp(
+		path.join(
+			os.tmpdir(),
+			"codemod-missing-await-act-tests-newly-async-factory-return",
+		),
+	);
+	const code = `
+		import * as React from 'react'
+
+		export function createAct() {
+			return () => {
+				React.act()
+			}
+		}
+		
+		export const act = createAct();
+		export { act as actAlias, createAct as createActAlias }
+		export default act;
+
+		test('test', () => {
+			act()	
+		})
+	`;
+
+	const result = await applyTransform(code, { escapedBindingsPath });
+
+	expect(result).toMatchInlineSnapshot(`
+		"import * as React from 'react'
+
+		export function createAct() {
+			return async () => {
+				await React.act()
+			};
+		}
+
+		export const act = createAct();
+		export { act as actAlias, createAct as createActAlias }
+		export default act;
+
+		test('test', async () => {
+			await act()	
+		})"
+	`);
+	const escapedBindingsFiles = await fs.readdir(escapedBindingsPath);
+	expect(escapedBindingsFiles).toHaveLength(1);
+	await expect(
+		fs
+			.readFile(
+				path.join(escapedBindingsPath, escapedBindingsFiles[0]),
+				"utf-8",
+			)
+			.then((json) => JSON.parse(json)),
+	).resolves.toEqual({
+		escapedBindings: ["act", "actAlias", "default"],
+		escapedFactoryBindings: ["createAct", "createActAlias"],
+		filePath: expect.any(String),
+	});
+});
+
+test("asyncFunctionFactory", async () => {
+	const escapedBindingsPath = await fs.mkdtemp(
+		path.join(os.tmpdir(), "codemod-missing-await-act-asyncFunctionFactory"),
+	);
+	const importConfig = {
+		imports: [
+			{
+				sources: ["@acme/test-utils"],
+				specifiers: [{ imported: "makeRender", asyncFunctionFactory: true }],
+			},
+		],
+	};
+	const importConfigPath = path.join(
+		await fs.mkdtemp(
+			path.join(os.tmpdir(), "codemod-missing-await-act-asyncFunctionFactory"),
+		),
+		"import-config.json",
+	);
+	await fs.writeFile(importConfigPath, JSON.stringify(importConfig, 2, null));
+	const code = `
+		import {makeRender} from '@acme/test-utils'
+
+		const render = makeRender()
+		test('test', () => {
+			render()
+		})
+
+		export const makeRenderAliased = makeRender;
+		export { makeRender as makeRenderAs, render }
+		export default makeRender;
+	`;
+
+	const result = await applyTransform(code, {
+		escapedBindingsPath,
+		importConfig: importConfigPath,
+	});
+
+	expect(result).toMatchInlineSnapshot(`
+		"import {makeRender} from '@acme/test-utils'
+
+		const render = makeRender()
+		test('test', async () => {
+			await render()
+		})
+
+		export const makeRenderAliased = makeRender;
+		export { makeRender as makeRenderAs, render }
+		export default makeRender;"
+	`);
+	const escapedBindingsFiles = await fs.readdir(escapedBindingsPath);
+	expect(escapedBindingsFiles).toHaveLength(1);
+	await expect(
+		fs
+			.readFile(
+				path.join(escapedBindingsPath, escapedBindingsFiles[0]),
+				"utf-8",
+			)
+			.then((json) => JSON.parse(json)),
+	).resolves.toEqual({
+		escapedBindings: ["render"],
+		escapedFactoryBindings: [],
+		// TODO: re-export not tracked
+		// escapedFactoryBindings: ["makeRenderAliased", "makeRenderAs", "default"],
+		filePath: expect.any(String),
+	});
 });
