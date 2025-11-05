@@ -1,5 +1,11 @@
 # codemod-missing-await-act
 
+## 1.1.1
+
+### Patch Changes
+
+- [#116](https://github.com/eps1lon/codemod-missing-await-act/pull/116) [`a30c6ba`](https://github.com/eps1lon/codemod-missing-await-act/commit/a30c6ba399f51ef92aa419d52285057e904ffbb7) Thanks [@eps1lon](https://github.com/eps1lon)! - Fix crash with certain sources in .js files
+
 ## 1.1.0
 
 ### Minor Changes
