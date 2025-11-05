@@ -1,4 +1,6 @@
 const babylon = require("@babel/parser");
+// @ts-expect-error -- not typed
+const hermesParser = require("hermes-parser");
 const j = require("jscodeshift");
 
 /**
@@ -50,10 +52,6 @@ const tsxParserOptions = {
 	...tsParserOptions,
 	plugins: [...tsParserOptions.plugins, "jsx"],
 };
-const jsParserOptions = {
-	...baseParserOptions,
-	plugins: [...baseParserOptions.plugins, "flow", "jsx"],
-};
 
 /**
  * Fork `jscodeshift`'s `tsx` parser with support for .d.ts files
@@ -91,7 +89,10 @@ function parseSync(fileInfo) {
 				} else if (tsx) {
 					return babylon.parse(code, tsxParserOptions);
 				} else {
-					return babylon.parse(code, jsParserOptions);
+					return hermesParser.parse(code, {
+						babel: true,
+						sourceFilename: fileInfo.path,
+					});
 				}
 			},
 		},
