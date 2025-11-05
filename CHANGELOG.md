@@ -1,5 +1,13 @@
 # codemod-missing-await-act
 
+## 1.1.2
+
+### Patch Changes
+
+- [#118](https://github.com/eps1lon/codemod-missing-await-act/pull/118) [`3b758d3`](https://github.com/eps1lon/codemod-missing-await-act/commit/3b758d3e165b75f5ebf14079303435b7f0488137) Thanks [@eps1lon](https://github.com/eps1lon)! - Fix crash on modern JS syntax
+
+  Like top-level `await`
+
 ## 1.1.1
 
 ### Patch Changes
