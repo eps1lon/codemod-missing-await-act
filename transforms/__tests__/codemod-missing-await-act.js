@@ -7,7 +7,9 @@ const path = require("path");
 const codemodMissingAwaitTransform = require("../codemod-missing-await-act");
 
 async function applyTransform(source, options = {}) {
+	const { filePath = "test.tsx", ...providedTransformOptions } = options;
 	const transformOptions = {
+		...providedTransformOptions,
 		escapedBindingsPath: await fs.mkdtemp(
 			path.join(
 				os.tmpdir(),
@@ -35,7 +37,7 @@ async function applyTransform(source, options = {}) {
 		codemodMissingAwaitTransform,
 		transformOptions,
 		{
-			path: "test.tsx",
+			path: filePath,
 			source: /^\s/.test(source) ? dedent(source) : source,
 		},
 	);
@@ -1103,4 +1105,29 @@ test("asyncFunctionFactory", async () => {
 		// escapedFactoryBindings: ["makeRenderAliased", "makeRenderAs", "default"],
 		filePath: expect.any(String),
 	});
+});
+
+test("React Component syntax", async () => {
+	await expect(
+		applyTransform(
+			`
+			import { render } from "@testing-library/react"
+			test("void works", () => {
+				component Foo() {
+					return <div />
+				}
+				render(<Foo />)
+			})
+		`,
+			{ filePath: "test.js" },
+		),
+	).resolves.toMatchInlineSnapshot(`
+		"import { render } from "@testing-library/react"
+		test("void works", async () => {
+			component Foo() {
+				return <div />
+			}
+			await render(<Foo />)
+		})"
+	`);
 });

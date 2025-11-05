@@ -1,5 +1,6 @@
 const { describe, expect, test } = require("@jest/globals");
 const parseSync = require("../parseSync");
+const { default: dedent } = require("dedent");
 
 describe("parseSync", () => {
 	test("oldschool type casts in ts files", () => {
@@ -44,6 +45,21 @@ describe("parseSync", () => {
 			parseSync({
 				path: "test.js",
 				source: `import type { Foo } from 'foo';`,
+			}),
+		).not.toThrow();
+	});
+
+	test("React Component syntax", () => {
+		expect(() =>
+			parseSync({
+				path: "test.js",
+				source: dedent`
+					test("void works", () => {
+						component Foo() {
+							return <div />
+						}
+					})
+				`,
 			}),
 		).not.toThrow();
 	});
