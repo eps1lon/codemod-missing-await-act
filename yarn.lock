@@ -2934,7 +2934,7 @@ __metadata:
     "@types/yargs": ^17.0.10
     dedent: ^1.5.3
     eslint: ^8.12.0
-    hermes-parser: ^0.23.1
+    hermes-parser: ^0.32.1
     inquirer: ^12.0.0
     jest: ^29.0.0
     jscodeshift: ^17.0.0
@@ -3742,19 +3742,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"hermes-estree@npm:0.23.1":
-  version: 0.23.1
-  resolution: "hermes-estree@npm:0.23.1"
-  checksum: 0f63edc365099304f4cd8e91a3666a4fb5a2a47baee751dc120df9201640112865944cae93617f554af71be9827e96547f9989f4972d6964ecc121527295fec6
+"hermes-estree@npm:0.32.1":
+  version: 0.32.1
+  resolution: "hermes-estree@npm:0.32.1"
+  checksum: 449090865bf2882ecc3758998d4b89f1e6e5a846fc8478155041e2103919ab80c57609ffd65265a8cf0d4e80c207bec48ee1bb4be4af2e49876fe5662978d3d2
   languageName: node
   linkType: hard
 
-"hermes-parser@npm:^0.23.1":
-  version: 0.23.1
-  resolution: "hermes-parser@npm:0.23.1"
+"hermes-parser@npm:^0.32.1":
+  version: 0.32.1
+  resolution: "hermes-parser@npm:0.32.1"
   dependencies:
-    hermes-estree: 0.23.1
-  checksum: a08008928aea9ea9a2cab2c0fac3cffa21f7869ab3fabb68e5add0fe057737a0c352d7a446426f7956172ccc8f2d4a215b4fc20d1d08354fc8dc16772c248fce
+    hermes-estree: 0.32.1
+  checksum: 578daf2bc118057a709a8103b806c2be6382707485400de01fca2f52b7a9bb7c3510c9bc8a045f9a6dbdf2cc6dc97a6d856fe22ca61b790d949ad745fbb02566
   languageName: node
   linkType: hard
 

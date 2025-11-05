@@ -89,10 +89,16 @@ function parseSync(fileInfo) {
 				} else if (tsx) {
 					return babylon.parse(code, tsxParserOptions);
 				} else {
-					return hermesParser.parse(code, {
+					const result = hermesParser.parse(code, {
 						babel: true,
 						sourceFilename: fileInfo.path,
+						tokens: true,
 					});
+					// Hermes parser bug. Should have tokens field.
+					if (result.tokens === undefined) {
+						result.tokens = [];
+					}
+					return result;
 				}
 			},
 		},
