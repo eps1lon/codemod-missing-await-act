@@ -1,5 +1,11 @@
 # codemod-missing-await-act
 
+## 1.1.3
+
+### Patch Changes
+
+- [#120](https://github.com/eps1lon/codemod-missing-await-act/pull/120) [`6a3cf71`](https://github.com/eps1lon/codemod-missing-await-act/commit/6a3cf719c3bb24f89bb09f6599543ecd6b9b8899) Thanks [@eps1lon](https://github.com/eps1lon)! - Produce valid import configs when async factories are exported
+
 ## 1.1.2
 
 ### Patch Changes
