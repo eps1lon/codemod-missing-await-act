@@ -1,5 +1,85 @@
 # codemod-missing-await-act
 
+## 1.0.0
+
+### Major Changes
+
+- [#62](https://github.com/eps1lon/codemod-missing-await-act/pull/62) [`327916e`](https://github.com/eps1lon/codemod-missing-await-act/commit/327916e77ba8c951727d7bef8c7bece9000d39fb) Thanks [@eps1lon](https://github.com/eps1lon)! - Use JSON-based import config
+
+  Instead of JS-based import config.
+  Seems simpler.
+
+  New default:
+
+  ```json
+  {
+  	"$schema": "https://github.com/eps1lon/codemod-missing-await-act/tree/main/config/schema-latest.json",
+  	"version": 1,
+  	"imports": [
+  		{
+  			"sources": [
+  				"@testing-library/react",
+  				"@testing-library/react/pure",
+  				"@testing-library/react-native",
+  				"@testing-library/react-native/pure"
+  			],
+  			"specifiers": [
+  				"act",
+  				"cleanup",
+  				{ "imported": "fireEvent", "includeMemberCalls": true },
+  				"render",
+  				"renderHook"
+  			]
+  		},
+  		{
+  			"sources": "react",
+  			"specifiers": ["act", "unstable_act"]
+  		},
+  		{
+  			"sources": ["react-dom/test-utils", "react-test-renderer"],
+  			"specifiers": ["act"]
+  		}
+  	]
+  }
+  ```
+
+### Minor Changes
+
+- [#91](https://github.com/eps1lon/codemod-missing-await-act/pull/91) [`86d7145`](https://github.com/eps1lon/codemod-missing-await-act/commit/86d714550f2539f8a6b23258a4907a32f88ed183) Thanks [@eps1lon](https://github.com/eps1lon)! - Handle factories of newly async functions
+
+  For example, in `const makeRender = () => () => render(...)`,
+  `makeRender` is considered factory of a newly async function.
+
+  We make sure that the `await` is added in the right places e.g.
+
+  ```diff
+  const render = makeRender()
+
+  -render()
+  +await render()
+  ```
+
+### Patch Changes
+
+- [#58](https://github.com/eps1lon/codemod-missing-await-act/pull/58) [`ee5204e`](https://github.com/eps1lon/codemod-missing-await-act/commit/ee5204e429f3984d42fe15c9804fee34e56a109b) Thanks [@eps1lon](https://github.com/eps1lon)! - Support `React.act`
+
+  We previously didn't consider this method as newly async.
+
+  Even though it isn't `async` yet, we should start codemodding it as if it were.
+  We already codemodded `unstable_act` in the same way.
+  `unstable_act` is renamed to `act` in React 19, so we should be ready for this change.
+
+- [#61](https://github.com/eps1lon/codemod-missing-await-act/pull/61) [`b102b63`](https://github.com/eps1lon/codemod-missing-await-act/commit/b102b63d26e9eb886d3db6faeb83286594bb07b5) Thanks [@eps1lon](https://github.com/eps1lon)! - Log escaped bindings even if code wasn't changed
+
+  E.g. `export const myAct = scope => React.act(scope)` is newly async,
+  but we didn't used to log it because the code didn't change.
+  Now we do log it as escaped and recommend running the codemod again.
+
+- [#60](https://github.com/eps1lon/codemod-missing-await-act/pull/60) [`f10a345`](https://github.com/eps1lon/codemod-missing-await-act/commit/f10a345d129bf785dfb63a3e75fc11e330743829) Thanks [@phryneas](https://github.com/phryneas)! - Add support for `using` syntax
+
+  Previously, the codemod couldn't be applied to files leveraging explicit resource
+  managmment with the `using` syntax.
+
 ## 0.3.0
 
 ### Minor Changes
