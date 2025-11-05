@@ -1,5 +1,14 @@
 # codemod-missing-await-act
 
+## 1.1.0
+
+### Minor Changes
+
+- [#25](https://github.com/eps1lon/codemod-missing-await-act/pull/25) [`354c10c`](https://github.com/eps1lon/codemod-missing-await-act/commit/354c10c6ea9e81d22cc6b6f172e864e61b5db81a) Thanks [@eps1lon](https://github.com/eps1lon)! - Add support for React Component syntax
+
+  JS files are now parsed with Hermes Parser.
+  Only Flow.js supports this syntax at the moment.
+
 ## 1.0.0
 
 ### Major Changes
