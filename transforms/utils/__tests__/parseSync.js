@@ -63,4 +63,13 @@ describe("parseSync", () => {
 			}),
 		).not.toThrow();
 	});
+
+	test("top-level await", () => {
+		expect(() =>
+			parseSync({
+				path: "test.js",
+				source: `export {}; await null;`,
+			}),
+		).not.toThrow();
+	});
 });

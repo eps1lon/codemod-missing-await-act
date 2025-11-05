@@ -52,6 +52,10 @@ const tsxParserOptions = {
 	...tsParserOptions,
 	plugins: [...tsParserOptions.plugins, "jsx"],
 };
+const jsParserOptions = {
+	...baseParserOptions,
+	plugins: [...baseParserOptions.plugins, "flow", "jsx"],
+};
 
 /**
  * Fork `jscodeshift`'s `tsx` parser with support for .d.ts files
@@ -89,16 +93,20 @@ function parseSync(fileInfo) {
 				} else if (tsx) {
 					return babylon.parse(code, tsxParserOptions);
 				} else {
-					const result = hermesParser.parse(code, {
-						babel: true,
-						sourceFilename: fileInfo.path,
-						tokens: true,
-					});
-					// Hermes parser bug. Should have tokens field.
-					if (result.tokens === undefined) {
-						result.tokens = [];
+					try {
+						return babylon.parse(code, jsParserOptions);
+					} catch {
+						const result = hermesParser.parse(code, {
+							babel: true,
+							sourceFilename: fileInfo.path,
+							tokens: true,
+						});
+						// Hermes parser bug. Should have tokens field.
+						if (result.tokens === undefined) {
+							result.tokens = [];
+						}
+						return result;
 					}
-					return result;
 				}
 			},
 		},
