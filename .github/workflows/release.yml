@@ -11,8 +11,8 @@ jobs:
     environment: production
     permissions:
       id-token: write # Required for OIDC
-      contents: read
-      issues: write
+      # Changesets creates a commit and PR for the release
+      contents: write
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
