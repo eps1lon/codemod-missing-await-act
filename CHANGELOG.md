@@ -1,5 +1,13 @@
 # codemod-missing-await-act
 
+## 1.1.4
+
+### Patch Changes
+
+- [#122](https://github.com/eps1lon/codemod-missing-await-act/pull/122) [`0fa0c7e`](https://github.com/eps1lon/codemod-missing-await-act/commit/0fa0c7ef7c66e8260eced242996e4af080c61bd9) Thanks [@eps1lon](https://github.com/eps1lon)! - Switch to trusted publishing
+
+  All releases should now include provenance attestations.
+
 ## 1.1.3
 
 ### Patch Changes
