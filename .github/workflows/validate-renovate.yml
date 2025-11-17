@@ -21,6 +21,6 @@ jobs:
       - name: Use Node.js 22.x
         uses: actions/setup-node@v4
         with:
-          node-version: 22.x
+          node-version: 24.x
       # keep in sync with `yarn test:renovate`
       - run: yarn dlx --package renovate@31.21.2 renovate-config-validator
