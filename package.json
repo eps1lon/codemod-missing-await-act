@@ -52,6 +52,6 @@
 		"access": "public"
 	},
 	"volta": {
-		"node": "18.20.6"
+		"node": "18.20.8"
 	}
 }
